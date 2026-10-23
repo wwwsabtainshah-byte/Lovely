@@ -214,7 +214,7 @@ class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
                   GridView.count(
                     crossAxisCount: 4,
                     shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics,
+                    physics: const NeverScrollableScrollPhysics(),
                     children: [
                       _buildGridItem(Icons.task, 'Task', Colors.amber),
                       _buildGridItem(Icons.trending_up, 'Level', Colors.pinkAccent),
