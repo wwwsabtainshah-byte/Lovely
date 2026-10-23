@@ -1,42 +1,42 @@
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(const LovelyApp());
+  runApp(const XenaApp());
 }
 
-class LovelyApp extends StatelessWidget {
-  const LovelyApp({Key? key}) : super(key: key);
+class XenaApp extends StatelessWidget {
+  const XenaApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Lovely Chat',
+      title: 'Xena',
       theme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0F0B1E),
-        primarySwatch: Colors.purple,
+        scaffoldBackgroundColor: const Color(0xFF120B29),
+        primarySwatch: Colors.deepPurple,
       ),
-      home: const MainHomeScreen(),
+      home: const XenaMainScreen(),
     );
   }
 }
 
-class MainHomeScreen extends StatefulWidget {
-  const MainHomeScreen({Key? key}) : super(key: key);
+class XenaMainScreen extends StatefulWidget {
+  const XenaMainScreen({Key? key}) : super(key: key);
 
   @override
-  State<MainHomeScreen> createState() => _MainHomeScreenState();
+  State<XenaMainScreen> createState() => _XenaMainScreenState();
 }
 
-class _MainHomeScreenState extends State<MainHomeScreen> {
+class _XenaMainScreenState extends State<XenaMainScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [
-    const PartyRoomsHomeScreen(),
-    const Center(child: Text('Moments Screen', style: TextStyle(color: Colors.white))),
-    const Center(child: Text('Chat Screen', style: TextStyle(color: Colors.white))),
-    const LovelyProfileScreen(),
+    const XenaRoomsScreen(),
+    const XenaVideoLiveScreen(),
+    const Center(child: Text('Message Screen', style: TextStyle(color: Colors.white))),
+    const XenaProfileScreen(),
   ];
 
   @override
@@ -44,9 +44,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     return Scaffold(
       body: _pages[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF150F24),
-        selectedItemColor: Colors.pinkAccent,
-        unselectedItemColor: Colors.white60,
+        backgroundColor: const Color(0xFF190F3A),
+        selectedItemColor: Colors.amberAccent,
+        unselectedItemColor: Colors.white54,
         currentIndex: _currentIndex,
         type: BottomNavigationBarType.fixed,
         onTap: (index) {
@@ -55,87 +55,50 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
           });
         },
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.live_tv), label: 'Live'),
-          BottomNavigationBarItem(icon: Icon(Icons.public), label: 'Moments'),
-          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble), label: 'Message'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Me'),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Rooms'),
+          BottomNavigationBarItem(icon: Icon(Icons.videocam), label: 'Live'),
+          BottomNavigationBarItem(icon: Icon(Icons.message), label: 'Message'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );
   }
 }
 
-class PartyRoomsHomeScreen extends StatelessWidget {
-  const PartyRoomsHomeScreen({Key? key}) : super(key: key);
+// Xena Party Rooms Screen
+class XenaRoomsScreen extends StatelessWidget {
+  const XenaRoomsScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: DefaultTabController(
-        length: 4,
-        initialIndex: 1,
+        length: 3,
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: TabBar(
-                      isScrollable: true,
-                      indicatorColor: Colors.pinkAccent,
-                      labelColor: Colors.white,
-                      unselectedLabelColor: Colors.white54,
-                      tabs: [
-                        Tab(text: 'Mine'),
-                        Tab(text: 'Hot'),
-                        Tab(text: 'Message'),
-                        Tab(text: 'Follow'),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.search, color: Colors.white),
-                    onPressed: () {},
-                  ),
+            AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              title: const TabBar(
+                indicatorColor: Colors.amberAccent,
+                labelColor: Colors.amberAccent,
+                unselectedLabelColor: Colors.white54,
+                tabs: [
+                  Tab(text: 'Hot'),
+                  Tab(text: 'Party'),
+                  Tab(text: 'Follow'),
                 ],
               ),
+              actions: [
+                IconButton(icon: const Icon(Icons.search, color: Colors.white), onPressed: () {}),
+              ],
             ),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.all(12),
                 children: [
-                  Container(
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [Color(0xFF633214), Color(0xFF381F0D)]),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.amber.withOpacity(0.5)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.diamond, color: Colors.amber, size: 36),
-                        const SizedBox(width: 12),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('King of Kings', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 16)),
-                              Text('Become and enjoy exclusive privileges', style: TextStyle(fontSize: 12, color: Colors.white70)),
-                            ],
-                          ),
-                        ),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black),
-                          onPressed: () {},
-                          child: const Text('Activate'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  _buildRoomCard(context, 'Shah G Video Live Room', 'Video Stream', '520', true),
-                  _buildRoomCard(context, 'Murshad Audio Party Room', 'Audio Party', '138', false),
+                  _buildRoomCard(context, 'Xena Official Party Room', 'PK 🇵🇰', '1.2k', true),
+                  _buildRoomCard(context, 'Royal Music & Chat', 'PK 🇵🇰', '850', true),
                 ],
               ),
             ),
@@ -145,70 +108,70 @@ class PartyRoomsHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRoomCard(BuildContext context, String name, String type, String online, bool isVideo) {
+  Widget _buildRoomCard(BuildContext context, String title, String country, String online, bool isAudioParty) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
+      margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF1F1635),
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFF22154A),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.amber.withOpacity(0.3)),
       ),
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: isVideo ? Colors.pinkAccent : Colors.purple,
-          child: Icon(isVideo ? Icons.videocam : Icons.mic, color: Colors.white),
+        leading: const CircleAvatar(
+          radius: 28,
+          backgroundImage: NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
         ),
-        title: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        subtitle: Text(type, style: const TextStyle(color: Colors.white54, fontSize: 12)),
-        trailing: Text(online, style: const TextStyle(color: Colors.pinkAccent)),
+        title: Row(
+          children: [
+            Text(country, style: const TextStyle(fontSize: 12)),
+            const SizedBox(width: 6),
+            Expanded(child: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+          ],
+        ),
+        subtitle: Text('Online: $online', style: const TextStyle(color: Colors.amberAccent, fontSize: 12)),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white54),
         onTap: () {
-          if (isVideo) {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => VideoLiveRoomScreen(roomName: name)));
-          } else {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => AudioPartyRoomScreen(roomName: name)));
-          }
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => XenaAudioRoomScreen(roomName: title)),
+          );
         },
       ),
     );
   }
 }
 
-class VideoLiveRoomScreen extends StatelessWidget {
+// Xena Audio Party Room with Seats & Settings
+class XenaAudioRoomScreen extends StatelessWidget {
   final String roomName;
-  const VideoLiveRoomScreen({Key? key, required this.roomName}) : super(key: key);
+  const XenaAudioRoomScreen({Key? key, required this.roomName}) : super(key: key);
 
-  void _showVideoSettings(BuildContext context) {
+  void _showRoomSettings(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1F1635),
+      backgroundColor: const Color(0xFF1E1242),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
         return Padding(
           padding: const EdgeInsets.all(20.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Video Live Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber)),
-                  IconButton(icon: const Icon(Icons.close, color: Colors.white54), onPressed: () => Navigator.pop(context)),
-                ],
-              ),
-              const SizedBox(height: 10),
+              const Text('Room Settings', style: TextStyle(color: Colors.amberAccent, fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 15),
               ListTile(
-                leading: const Icon(Icons.camera_front, color: Colors.pinkAccent),
-                title: const Text('Flip Camera & Filters', style: TextStyle(color: Colors.white)),
+                leading: const Icon(Icons.edit, color: Colors.pinkAccent),
+                title: const Text('Edit Room Notice', style: TextStyle(color: Colors.white)),
                 onTap: () {},
               ),
               ListTile(
-                leading: const Icon(Icons.flash_on, color: Colors.amber),
-                title: const Text('Beautification & Makeup', style: TextStyle(color: Colors.white)),
-                onTap: () {},
+                leading: const Icon(Icons.lock, color: Colors.amber),
+                title: const Text('Room Password Lock', style: TextStyle(color: Colors.white)),
+                trailing: Switch(value: false, onChanged: (val) {}, activeColor: Colors.amberAccent),
               ),
               ListTile(
-                leading: const Icon(Icons.block, color: Colors.redAccent),
-                title: const Text('Mute / Kick Viewers', style: TextStyle(color: Colors.white)),
+                leading: const Icon(Icons.mic_off, color: Colors.redAccent),
+                title: const Text('Lock All Seats', style: TextStyle(color: Colors.white)),
                 onTap: () {},
               ),
             ],
@@ -217,6 +180,50 @@ class VideoLiveRoomScreen extends StatelessWidget {
       },
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0C061F),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        title: Text(roomName, style: const TextStyle(fontSize: 16)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.white),
+            onPressed: () => _showRoomSettings(context),
+          ),
+        ],
+      ),
+      body: GridView.builder(
+        padding: const EdgeInsets.all(16),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4,
+          mainAxisSpacing: 20,
+          crossAxisSpacing: 16,
+        ),
+        itemCount: 8,
+        itemBuilder: (context, index) {
+          return Column(
+            children: [
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: const Color(0xFF2B1A5E),
+                child: Icon(index == 0 ? Icons.mic : Icons.lock, color: index == 0 ? Colors.amberAccent : Colors.white30),
+              ),
+              const SizedBox(height: 6),
+              Text('Seat ${index + 1}', style: const TextStyle(color: Colors.white70, fontSize: 11)),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+// Xena Video Live Screen
+class XenaVideoLiveScreen extends StatelessWidget {
+  const XenaVideoLiveScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -236,18 +243,24 @@ class VideoLiveRoomScreen extends StatelessWidget {
           ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(12.0),
+              padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
                   const CircleAvatar(backgroundImage: NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150')),
-                  const SizedBox(width: 8),
-                  Text(roomName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 10),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Xena Live Host', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      Text('ID: 8849201', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                    ],
+                  ),
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.settings, color: Colors.white),
-                    onPressed: () => _showVideoSettings(context),
+                    onPressed: () {},
                   ),
-                  IconButton(icon: const Icon(Icons.close, color: Colors.white), onPressed: () => Navigator.pop(context)),
                 ],
               ),
             ),
@@ -258,298 +271,89 @@ class VideoLiveRoomScreen extends StatelessWidget {
   }
 }
 
-class AudioPartyRoomScreen extends StatelessWidget {
-  final String roomName;
-  const AudioPartyRoomScreen({Key? key, required this.roomName}) : super(key: key);
-
-  void _showRoomSettings(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1F1635),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Audio Room Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber)),
-                  IconButton(icon: const Icon(Icons.close, color: Colors.white54), onPressed: () => Navigator.pop(context)),
-                ],
-              ),
-              const SizedBox(height: 10),
-              ListTile(
-                leading: const Icon(Icons.edit, color: Colors.pinkAccent),
-                title: const Text('Edit Room Notice & Name', style: TextStyle(color: Colors.white)),
-                onTap: () {},
-              ),
-              ListTile(
-                leading: const Icon(Icons.lock_outline, color: Colors.purpleAccent),
-                title: const Text('Room Password Lock', style: TextStyle(color: Colors.white)),
-                trailing: Switch(value: false, onChanged: (val) {}, activeColor: Colors.pinkAccent),
-              ),
-              ListTile(
-                leading: const Icon(Icons.mic_off, color: Colors.redAccent),
-                title: const Text('Lock All Seats', style: TextStyle(color: Colors.white)),
-                onTap: () {},
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF090414),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        title: Text(roomName),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
-            onPressed: () => _showRoomSettings(context),
-          ),
-        ],
-      ),
-      body: GridView.builder(
-        padding: const EdgeInsets.all(16),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 5,
-          mainAxisSpacing: 16,
-          crossAxisSpacing: 12,
-          childAspectRatio: 0.75,
-        ),
-        itemCount: 10,
-        itemBuilder: (context, index) {
-          return Column(
-            children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: const Color(0xFF1F1635),
-                child: Icon(
-                  index == 0 ? Icons.mic : Icons.lock,
-                  color: index == 0 ? Colors.purpleAccent : Colors.white30,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text('No.${index + 1}', style: const TextStyle(color: Colors.white54, fontSize: 10)),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class LovelyProfileScreen extends StatefulWidget {
-  const LovelyProfileScreen({Key? key}) : super(key: key);
-
-  @override
-  State<LovelyProfileScreen> createState() => _LovelyProfileScreenState();
-}
-
-class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
-  void _showWithdrawDialog(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1F1635),
-      builder: (context) => const Padding(
-        padding: EdgeInsets.all(20.0),
-        child: Text('Withdraw Earnings: Available Diamonds 0 (\$0.00)', style: TextStyle(color: Colors.white)),
-      ),
-    );
-  }
-
-  void _showRechargeDialog(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1F1635),
-      builder: (context) => const Padding(
-        padding: EdgeInsets.all(20.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Online Recharge Coins', style: TextStyle(color: Colors.amber, fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(height: 10),
-            ListTile(leading: Icon(Icons.phone_android, color: Colors.green), title: Text('Easypaisa')),
-            ListTile(leading: Icon(Icons.phone_android, color: Colors.orange), title: Text('JazzCash')),
-            ListTile(leading: Icon(Icons.credit_card, color: Colors.blue), title: Text('Credit / Debit Card')),
-          ],
-        ),
-      ),
-    );
-  }
+// Xena Profile & Wallet Screen
+class XenaProfileScreen extends StatelessWidget {
+  const XenaProfileScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Column(
         children: [
-          Stack(
-            children: [
-              Container(
-                height: 180,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [Color(0xFF4A154B), Color(0xFF1E1035)]),
-                ),
-              ),
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      const CircleAvatar(
-                        radius: 32,
-                        backgroundImage: NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Addison', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-                            SizedBox(height: 4),
-                            Text('ID: 41794595 • PK 18', style: TextStyle(fontSize: 12, color: Colors.white70)),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.settings, color: Colors.white),
-                        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsPage())),
-                      ),
-                    ],
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(colors: [Color(0xFF3F196E), Color(0xFF190F3A)]),
+            ),
+            child: SafeArea(
+              child: Row(
+                children: [
+                  const CircleAvatar(
+                    radius: 35,
+                    backgroundImage: NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
                   ),
-                ),
+                  const SizedBox(width: 15),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Xena User', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                        SizedBox(height: 4),
+                        Text('Xena ID: 5928104', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.settings, color: Colors.amberAccent, size: 28),
+                    onPressed: () {},
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
                 Container(
-                  margin: const EdgeInsets.symmetric(vertical: 12),
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [Color(0xFF633214), Color(0xFF381F0D)]),
-                    borderRadius: BorderRadius.circular(12),
+                    color: const Color(0xFF22154A),
+                    borderRadius: BorderRadius.circular(15),
                   ),
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      const Icon(Icons.diamond, color: Colors.amber, size: 36),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('King of Kings', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 16)),
-                            Text('Become and enjoy exclusive privileges', style: TextStyle(fontSize: 12, color: Colors.white70)),
-                          ],
-                        ),
+                      const Column(
+                        children: [
+                          Text('Coins: 0', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          SizedBox(height: 8),
+                          Text('Easypaisa / JazzCash', style: TextStyle(color: Colors.amberAccent, fontSize: 12)),
+                        ],
                       ),
                       ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.amberAccent, foregroundColor: Colors.black),
                         onPressed: () {},
-                        child: const Text('Activate'),
+                        child: const Text('Recharge'),
                       ),
                     ],
                   ),
                 ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: const Color(0xFF1F1635), borderRadius: BorderRadius.circular(12)),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Coins: 0', style: TextStyle(color: Colors.white)),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black),
-                              onPressed: () => _showRechargeDialog(context),
-                              child: const Text('Recharge'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: const Color(0xFF1F1635), borderRadius: BorderRadius.circular(12)),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Diamonds: 0', style: TextStyle(color: Colors.white)),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.pinkAccent, foregroundColor: Colors.white),
-                              onPressed: () => _showWithdrawDialog(context),
-                              child: const Text('Withdraw'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                GridView.count(
-                  crossAxisCount: 4,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: const [
-                    Column(children: [Icon(Icons.task, color: Colors.amber), SizedBox(height: 4), Text('Task', style: TextStyle(fontSize: 12))]),
-                    Column(children: [Icon(Icons.trending_up, color: Colors.pinkAccent), SizedBox(height: 4), Text('Level', style: TextStyle(fontSize: 12))]),
-                    Column(children: [Icon(Icons.backpack, color: Colors.purpleAccent), SizedBox(height: 4), Text('Backpack', style: TextStyle(fontSize: 12))]),
-                    Column(children: [Icon(Icons.store, color: Colors.cyan), SizedBox(height: 4), Text('Store', style: TextStyle(fontSize: 12))]),
-                  ],
-                ),
-                const Divider(color: Colors.white24, height: 24),
+                const SizedBox(height: 20),
                 ListTile(
-                  leading: const Icon(Icons.settings, color: Colors.purpleAccent),
-                  title: const Text('Setting', style: TextStyle(color: Colors.white)),
+                  leading: const Icon(Icons.account_balance_wallet, color: Colors.pinkAccent),
+                  title: const Text('Withdraw', style: TextStyle(color: Colors.white)),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white54),
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsPage())),
+                  onTap: () {},
+                ),
+                ListTile(
+                  leading: const Icon(Icons.security, color: Colors.purpleAccent),
+                  title: const Text('Password & Security', style: TextStyle(color: Colors.white)),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white54),
+                  onTap: () {},
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class SettingsPage extends StatelessWidget {
-  const SettingsPage({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings', style: TextStyle(color: Colors.white)),
-        backgroundColor: const Color(0xFF1F1635),
-      ),
-      body: ListView(
-        children: const [
-          ListTile(
-            leading: Icon(Icons.person, color: Colors.pinkAccent),
-            title: Text('Edit Profile Name', style: TextStyle(color: Colors.white)),
-            subtitle: Text('Addison', style: TextStyle(color: Colors.white54, fontSize: 12)),
-          ),
-          ListTile(
-            leading: Icon(Icons.lock, color: Colors.purpleAccent),
-            title: Text('Password & Security', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
