@@ -1,0 +1,147 @@
+name: Build Lovely Chat APK
+
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Create Android project
+        run: flutter create --platforms=android --project-name lovely_chat .
+
+      - name: Configure Android package and Firebase
+        env:
+          FIREBASE_GOOGLE_SERVICES_JSON: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          p = Path("android/app/build.gradle")
+          if p.exists():
+              s = p.read_text()
+              s = s.replace("applicationId \"com.example.lovely_chat\"", "applicationId \"com.lovelychat.app\"")
+              p.write_text(s)
+
+          p = Path("android/app/build.gradle.kts")
+          if p.exists():
+              s = p.read_text()
+              s = s.replace('applicationId = "com.example.lovely_chat"', 'applicationId = "com.lovelychat.app"')
+              p.write_text(s)
+
+          raw = os.environ.get("FIREBASE_GOOGLE_SERVICES_JSON", "")
+          if not raw:
+              raise SystemExit("Missing FIREBASE_GOOGLE_SERVICES_JSON repository secret")
+
+          data = json.loads(raw)
+          package = data["client"][0]["client_info"]["android_client_info"]["package_name"]
+          if package != "com.lovelychat.app":
+              raise SystemExit(f"Firebase package mismatch: {package}")
+
+          Path("android/app/google-services.json").write_text(raw)
+          print("Firebase configuration copied.")
+          PY
+
+      - name: Enable Google Services Gradle plugin
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("android/settings.gradle")
+          if not p.exists():
+              p = Path("android/settings.gradle.kts")
+          s = p.read_text()
+
+          if "com.google.gms.google-services" not in s:
+              if p.suffix == ".kts":
+                  s = s.replace("plugins {", 'plugins {\n    id("com.google.gms.google-services") version "4.4.2" apply false', 1)
+              else:
+                  s = s.replace("plugins {", "plugins {\n    id 'com.google.gms.google-services' version '4.4.2' apply false", 1)
+              p.write_text(s)
+
+          for name in ("android/app/build.gradle", "android/app/build.gradle.kts"):
+              p = Path(name)
+              if p.exists():
+                  s = p.read_text()
+                  if "com.google.gms.google-services" not in s:
+                      if p.suffix == ".kts":
+                          s = s.replace("plugins {", 'plugins {\n    id("com.google.gms.google-services")', 1)
+                      else:
+                          s = s.replace("plugins {", "plugins {\n    id 'com.google.gms.google-services'", 1)
+                      p.write_text(s)
+                  break
+          PY
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Enable local backend HTTP
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('android/app/src/main/AndroidManifest.xml')
+          if not p.exists():
+              raise SystemExit('AndroidManifest.xml missing; listing android/app files:')
+          s = p.read_text()
+          if 'android.permission.INTERNET' not in s:
+              s = s.replace('<manifest', '<manifest', 1)
+              s = s.replace('<application', '<uses-permission android:name="android.permission.INTERNET"/>\n    <application', 1)
+          if 'android:usesCleartextTraffic=' not in s:
+              s = s.replace('<application', '<application android:usesCleartextTraffic="true"', 1)
+          p.write_text(s)
+          PY
+
+      - name: Fix WebRTC Android compile SDK
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          cache = Path.home() / '.pub-cache/hosted/pub.dev'
+          matches = list(cache.glob('flutter_webrtc-*/android/build.gradle'))
+          for p in matches:
+              s = p.read_text()
+              s = re.sub(r'compileSdkVersion\s+31\b', 'compileSdkVersion 35', s)
+              s = re.sub(r'compileSdk\s+31\b', 'compileSdk 35', s)
+              p.write_text(s)
+          print("WebRTC SDK compatibility check complete.")
+          PY
+
+      - name: Configure release signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -e
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/lovely-release.jks
+          python3 .github/workflows/configure_signing.py
+
+      - name: Build APK
+        env:
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lovely-Chat-APK
+          path: build/app/outputs/flutter-apk/app-release.apk

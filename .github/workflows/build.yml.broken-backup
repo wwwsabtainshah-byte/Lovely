@@ -1,0 +1,105 @@
+name: Build Lovely Chat APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Create Android project
+        run: |
+          flutter create --platforms=android --project-name lovely_chat .
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Enable local backend HTTP
+        run: |
+          python3 - <<'PYMANIFEST'
+          from pathlib import Path
+          p = Path('android/app/src/main/AndroidManifest.xml')
+          s = p.read_text()
+          if 'android.permission.INTERNET' not in s:
+              s = s.replace(
+                  '<manifest',
+                  '<manifest xmlns:tools="http://schemas.android.com/tools"',
+                  1
+              ) if 'xmlns:tools=' not in s else s
+              s = s.replace(
+                  '<application',
+                  '<uses-permission android:name="android.permission.INTERNET"/>\n    <application',
+                  1
+              )
+          if 'android:usesCleartextTraffic=' not in s:
+              s = s.replace(
+                  '<application',
+                  '<application android:usesCleartextTraffic="true"',
+                  1
+              )
+          p.write_text(s)
+          PYMANIFEST
+
+      - name: Fix WebRTC Android compile SDK
+        run: |
+          python3 - <<'PYFIX'
+          from pathlib import Path
+          import re
+
+          cache = Path.home() / '.pub-cache/hosted/pub.dev'
+          matches = list(cache.glob('flutter_webrtc-*/android/build.gradle'))
+
+          if not matches:
+              raise SystemExit('WebRTC Gradle file not found')
+
+          for p in matches:
+              s = p.read_text()
+              updated = re.sub(
+                  r'compileSdkVersion\s+31\b',
+                  'compileSdkVersion 35',
+                  s
+              )
+              updated = re.sub(
+                  r'compileSdk\s+31\b',
+                  'compileSdk 35',
+                  updated
+              )
+
+              if updated == s:
+                  print('No SDK 31 setting found:', p)
+              else:
+                  p.write_text(updated)
+                  print('Updated:', p)
+          PYFIX
+
+      - name: Show Android SHA fingerprints
+        run: |
+          mkdir -p "$HOME/.android"
+          keytool -genkeypair -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -E 'SHA1:|SHA256:'
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lovely-Chat-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
