@@ -74,7 +74,7 @@ class PartyRoomsHomeScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.transparent,
-          title: const Text('Party Rooms', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          title: const Text('Live & Party Rooms', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           actions: [
             IconButton(
               icon: const Icon(Icons.search, color: Colors.white),
@@ -85,21 +85,21 @@ class PartyRoomsHomeScreen extends StatelessWidget {
         body: ListView(
           padding: const EdgeInsets.all(12),
           children: [
-            _buildPartyRoomCard(
+            _buildRoomCard(
               context,
-              roomName: 'Shah G ★★ Room',
-              vipLevel: 'SVIP 1',
-              welcomeText: 'Welcome everyone! Let\'s chat and have fun together.',
-              onlineUsers: '392',
+              roomName: 'Shah G Live Video Stream',
+              type: 'Video Room',
+              onlineUsers: '520',
               badge: '🇵🇰',
+              isVideo: true,
             ),
-            _buildPartyRoomCard(
+            _buildRoomCard(
               context,
-              roomName: 'Murshad 🍁 G',
-              vipLevel: 'SVIP 1',
-              welcomeText: 'Welcome to audio party room.',
+              roomName: 'Murshad Audio Party',
+              type: 'Audio Room',
               onlineUsers: '138',
               badge: '🇵🇰',
+              isVideo: false,
             ),
           ],
         ),
@@ -107,13 +107,13 @@ class PartyRoomsHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPartyRoomCard(
+  Widget _buildRoomCard(
     BuildContext context, {
     required String roomName,
-    required String vipLevel,
-    required String welcomeText,
+    required String type,
     required String onlineUsers,
     required String badge,
+    required bool isVideo,
   }) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
@@ -125,8 +125,8 @@ class PartyRoomsHomeScreen extends StatelessWidget {
       child: ListTile(
         leading: CircleAvatar(
           radius: 26,
-          backgroundColor: Colors.purple.shade700,
-          child: const Icon(Icons.mic, color: Colors.white),
+          backgroundColor: isVideo ? Colors.pink.shade700 : Colors.purple.shade700,
+          child: Icon(isVideo ? Icons.videocam : Icons.mic, color: Colors.white),
         ),
         title: Row(
           children: [
@@ -136,72 +136,133 @@ class PartyRoomsHomeScreen extends StatelessWidget {
             Text(onlineUsers, style: const TextStyle(color: Colors.pinkAccent, fontSize: 12)),
           ],
         ),
-        subtitle: Text(welcomeText, style: const TextStyle(color: Colors.white54, fontSize: 12), maxLines: 1),
+        subtitle: Text(type, style: const TextStyle(color: Colors.white54, fontSize: 12)),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AudioPartyRoomScreen(roomName: roomName),
-            ),
-          );
+          if (isVideo) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => VideoLiveRoomScreen(roomName: roomName)),
+            );
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => AudioPartyRoomScreen(roomName: roomName)),
+            );
+          }
         },
       ),
     );
   }
 }
 
-// Live Audio Party Room Screen with Internal Room Settings
+// Video Live Streaming Room Screen
+class VideoLiveRoomScreen extends StatelessWidget {
+  final String roomName;
+
+  const VideoLiveRoomScreen({Key? key, required this.roomName}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // Background Video Placeholder / Stream Feed
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600'),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ),
+          // Gradient Overlay
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.black54, Colors.transparent, Colors.black87],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+            ),
+          ),
+          // Top Host Info Bar
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Row(
+                children: [
+                  const CircleAvatar(
+                    radius: 20,
+                    backgroundImage: NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(roomName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                      const Text('ID: 41794595 • 520 Watching', style: TextStyle(color: Colors.white70, fontSize: 10)),
+                    ],
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Bottom Chat & Interaction Bar
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.black45,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: const Text('Say something to the host...', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const CircleAvatar(
+                    backgroundColor: Colors.pinkAccent,
+                    child: Icon(Icons.card_giftcard, color: Colors.white),
+                  ),
+                  const SizedBox(width: 8),
+                  const CircleAvatar(
+                    backgroundColor: Colors.purple,
+                    child: Icon(Icons.favorite, color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Audio Party Room Screen
 class AudioPartyRoomScreen extends StatelessWidget {
   final String roomName;
 
   const AudioPartyRoomScreen({Key? key, required this.roomName}) : super(key: key);
-
-  void _showRoomSettings(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1F1635),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Room Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber)),
-                  IconButton(icon: const Icon(Icons.close, color: Colors.white54), onPressed: () => Navigator.pop(context)),
-                ],
-              ),
-              const SizedBox(height: 10),
-              ListTile(
-                leading: const Icon(Icons.edit, color: Colors.pinkAccent),
-                title: const Text('Edit Room Notice & Name', style: TextStyle(color: Colors.white)),
-                onTap: () {},
-              ),
-              ListTile(
-                leading: const Icon(Icons.lock_outline, color: Colors.purpleAccent),
-                title: const Text('Room Password Lock', style: TextStyle(color: Colors.white)),
-                trailing: Switch(value: false, onChanged: (val) {}, activeColor: Colors.pinkAccent),
-              ),
-              ListTile(
-                leading: const Icon(Icons.mic_off, color: Colors.redAccent),
-                title: const Text('Lock All Seats', style: TextStyle(color: Colors.white)),
-                onTap: () {},
-              ),
-              ListTile(
-                leading: const Icon(Icons.volume_up, color: Colors.blueAccent),
-                title: const Text('Background Music & Sound Effects', style: TextStyle(color: Colors.white)),
-                onTap: () {},
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -209,95 +270,10 @@ class AudioPartyRoomScreen extends StatelessWidget {
       backgroundColor: const Color(0xFF090414),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(roomName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-            const Text('ID: 1002394 • 392 Online', style: TextStyle(fontSize: 11, color: Colors.white54)),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
-            onPressed: () => _showRoomSettings(context),
-          ),
-          IconButton(
-            icon: const Icon(Icons.power_settings_new, color: Colors.redAccent),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ],
+        title: Text(roomName, style: const TextStyle(fontSize: 16, color: Colors.white)),
       ),
-      body: Column(
-        children: [
-          const SizedBox(height: 10),
-          Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.all(16),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 5,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 12,
-                childAspectRatio: 0.75,
-              ),
-              itemCount: 10,
-              itemBuilder: (context, index) {
-                return Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: const Color(0xFF1F1635),
-                      child: Icon(
-                        index == 0 ? Icons.mic : Icons.lock,
-                        color: index == 0 ? Colors.purpleAccent : Colors.white30,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text('No.${index + 1}', style: const TextStyle(color: Colors.white54, fontSize: 10)),
-                  ],
-                );
-              },
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            height: 100,
-            child: ListView(
-              children: const [
-                Text('Welcome to the party room!', style: TextStyle(color: Colors.amberAccent, fontSize: 12)),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            color: const Color(0xFF150F24),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF23163E),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text('Say Hi...', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                const CircleAvatar(
-                  backgroundColor: Color(0xFF23163E),
-                  child: Icon(Icons.mic_none, color: Colors.white),
-                ),
-                const SizedBox(width: 8),
-                const CircleAvatar(
-                  backgroundColor: Color(0xFF23163E),
-                  child: Icon(Icons.card_giftcard, color: Colors.pinkAccent),
-                ),
-              ],
-            ),
-          ),
-        ],
+      body: const Center(
+        child: Text('Audio Party Room Seats & Chat', style: TextStyle(color: Colors.white54)),
       ),
     );
   }
