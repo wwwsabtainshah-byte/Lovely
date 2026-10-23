@@ -467,24 +467,21 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings & Profile', style: TextStyle(color: Colors.white)),
+        title: const Text('Settings', style: TextStyle(color: Colors.white)),
         backgroundColor: const Color(0xFF1F1635),
       ),
       body: ListView(
         children: [
           const Padding(
             padding: EdgeInsets.all(16.0),
-            child: Text('Profile Management', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 16)),
+            child: Text('Profile Info', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 16)),
           ),
           ListTile(
             leading: const Icon(Icons.person_outline, color: Colors.pinkAccent),
-            title: const Text('Edit Profile Name & Info', style: TextStyle(color: Colors.white)),
+            title: const Text('Edit Profile Name', style: TextStyle(color: Colors.white)),
+            subtitle: const Text('Addison', style: TextStyle(color: Colors.white54, fontSize: 12)),
             trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white54),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Edit Profile settings tapped')),
-              );
-            },
+            onTap: () {},
           ),
           ListTile(
             leading: const Icon(Icons.badge, color: Colors.pinkAccent),
@@ -495,7 +492,7 @@ class SettingsPage extends StatelessWidget {
           const Divider(color: Colors.white24),
           const Padding(
             padding: EdgeInsets.all(16.0),
-            child: Text('App Settings', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 16)),
+            child: Text('Preferences & Security', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 16)),
           ),
           ListTile(
             leading: const Icon(Icons.notifications_none, color: Colors.purpleAccent),
@@ -504,7 +501,7 @@ class SettingsPage extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.lock_outline, color: Colors.purpleAccent),
-            title: const Text('Privacy & Security', style: TextStyle(color: Colors.white)),
+            title: const Text('Password & Security', style: TextStyle(color: Colors.white)),
             trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white54),
             onTap: () {},
           ),
@@ -518,7 +515,7 @@ class SettingsPage extends StatelessWidget {
             leading: const Icon(Icons.info_outline, color: Colors.purpleAccent),
             title: const Text('About Version', style: TextStyle(color: Colors.white)),
             subtitle: const Text('Lovely Chat v1.0.0', style: TextStyle(color: Colors.white54, fontSize: 12)),
-            onTap: () {},
+            onTab: () {},
           ),
         ],
       ),
