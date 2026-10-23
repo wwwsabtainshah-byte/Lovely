@@ -61,7 +61,7 @@ class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
               ),
               const SizedBox(height: 10),
               const Text(
-                'Available Diamonds: 0 ($0.00)',
+                'Available Diamonds: 0 (\$0.00)',
                 style: TextStyle(color: Colors.white70, fontSize: 14),
               ),
               const SizedBox(height: 15),
