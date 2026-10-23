@@ -107,13 +107,88 @@ class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
     );
   }
 
+  void _showRechargeDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1F1635),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Online Recharge Coins',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white54),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Select Payment Method:',
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              const SizedBox(height: 10),
+              ListTile(
+                leading: const Icon(Icons.phone_android, color: Colors.green),
+                title: const Text('Easypaisa', style: TextStyle(color: Colors.white)),
+                subtitle: const Text('Instant Mobile Deposit', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white54),
+                onTap: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Selected Easypaisa for Recharge')),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.phone_android, color: Colors.orange),
+                title: const Text('JazzCash', style: TextStyle(color: Colors.white)),
+                subtitle: const Text('Instant Mobile Deposit', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white54),
+                onTap: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Selected JazzCash for Recharge')),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.credit_card, color: Colors.blueAccent),
+                title: const Text('Credit / Debit Card', style: TextStyle(color: Colors.white)),
+                subtitle: const Text('Visa / Mastercard', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white54),
+                onTap: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Selected Card Payment for Recharge')),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Top Header Section
             Stack(
               children: [
                 Container(
@@ -174,7 +249,6 @@ class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Column(
                 children: [
-                  // VIP Banner Card
                   Container(
                     margin: const EdgeInsets.symmetric(vertical: 12),
                     padding: const EdgeInsets.all(12),
@@ -211,7 +285,6 @@ class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
                     ),
                   ),
 
-                  // Coins & Diamonds Cards with Withdraw Action
                   Row(
                     children: [
                       Expanded(
@@ -238,7 +311,7 @@ class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
                                   foregroundColor: Colors.black,
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 ),
-                                onPressed: () {},
+                                onPressed: () => _showRechargeDialog(context),
                                 child: const Text('Recharge', style: TextStyle(fontSize: 12)),
                               ),
                             ],
@@ -282,7 +355,6 @@ class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
 
                   const SizedBox(height: 12),
 
-                  // Invite Banner
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -299,7 +371,6 @@ class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
 
                   const SizedBox(height: 16),
 
-                  // Grid Options
                   GridView.count(
                     crossAxisCount: 4,
                     shrinkWrap: true,
@@ -317,7 +388,6 @@ class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
 
                   const Divider(color: Colors.white24, height: 24),
 
-                  // List Options (Including Withdraw Method option)
                   _buildListTile(Icons.account_balance_wallet, 'Withdraw Method', onTap: () => _showWithdrawDialog(context)),
                   _buildListTile(Icons.star, 'VIP'),
                   _buildListTile(Icons.security, 'Guardian'),
