@@ -1,0 +1,28 @@
+# Secrets and Firebase configuration
+google-services.json
+**/google-services.json
+.env
+.env.*
+*.jks
+*.keystore
+
+# Databases and logs
+*.db
+*.sqlite
+*.sqlite3
+*.log
+*.pid
+
+# Python generated files
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# Local backups
+*.backup
+*.bak
+*.broken-backup
+*.before_*
+*.google-backup
+*.owner-backup

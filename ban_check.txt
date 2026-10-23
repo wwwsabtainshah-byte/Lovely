@@ -1,0 +1,185 @@
+def refresh_ban_state(db, account):
+    username = account["username"]
+    now_dt = datetime.now(timezone.utc)
+
+    current = db.execute(
+        "SELECT * FROM accounts WHERE username = ?",
+        (username,),
+    ).fetchone()
+    if not current:
+        return account
+
+    updates = {}
+    active = False
+
+    for field in ("account_ban_until", "device_ban_until"):
+        value = current[field]
+        if value:
+            try:
+                expiry = datetime.fromisoformat(value)
+                if expiry.tzinfo is None:
+                    expiry = expiry.replace(tzinfo=timezone.utc)
+                if expiry > now_dt:
+                    active = True
+                else:
+                    updates[field] = None
+            except (ValueError, TypeError):
+                # Fail closed for malformed expiry values.
+                active = True
+
+    if current["account_ban_permanent"] or current["device_ban_permanent"]:
+        active = True
+
+    for field, value in updates.items():
+        db.execute(
+            f"UPDATE accounts SET {field} = ? WHERE username = ?",
+            (value, username),
+        )
+
+    db.execute(
+        "UPDATE accounts SET banned = ? WHERE username = ?",
+        (1 if active else 0, username),
+    )
+
+            "SELECT username FROM accounts WHERE device_id = ?",
+            (data.device_id,),
+        ).fetchall()
+
+        if not rows:
+            raise HTTPException(status_code=404, detail="Device not found")
+
+        if data.duration == "permanent":
+            db.execute("""
+                UPDATE accounts
+                SET device_ban_permanent = 1, device_ban_until = NULL,
+                    banned = 1
+                WHERE device_id = ?
+            """, (data.device_id,))
+        else:
+            db.execute("""
+                UPDATE accounts
+                SET device_ban_permanent = 0, device_ban_until = ?,
+                    banned = 1
+                WHERE device_id = ?
+            """, (expiry, data.device_id))
+
+        db.execute("""
+            DELETE FROM sessions
+            WHERE account_id IN (
+                SELECT id FROM accounts WHERE device_id = ?
+            )
+        """, (data.device_id,))
+
+        log_event(db, "DEVICE_BANNED", rows[0]["username"], data.device_id)
+
+    return {
+        "success": True,
+        "device_id": data.device_id,
+        "duration": data.duration,
+        "expires_at": expiry,
+        "status": "banned",
+    }
+
+
+# ==========================================
+# OWNER: UNBAN DEVICE
+# ==========================================
+
+@app.post("/owner/unban-device")
+def unban_device(
+    data: DeviceRequest,
+    _: bool = Depends(require_owner),
+):
+    with database() as db:
+        rows = db.execute(
+            "SELECT username FROM accounts WHERE device_id = ?",
+            (data.device_id,),
+        ).fetchall()
+
+        if not rows:
+            raise HTTPException(status_code=404, detail="Device not found")
+
+        db.execute("""
+            UPDATE accounts
+            SET device_ban_permanent = 0, device_ban_until = NULL
+            WHERE device_id = ?
+        """, (data.device_id,))
+
+        for row in rows:
+            refresh_ban_state(db, row)
+
+        log_event(db, "DEVICE_UNBANNED", None, data.device_id)
+
+    return {
+        "success": True,
+        row = db.execute(
+            "SELECT device_id FROM accounts WHERE username = ?",
+            (username,),
+        ).fetchone()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Account not found")
+
+        if duration == "permanent":
+            db.execute("""
+                UPDATE accounts
+                SET account_ban_permanent = 1, account_ban_until = NULL,
+                    banned = 1
+                WHERE username = ?
+            """, (username,))
+        else:
+            db.execute("""
+                UPDATE accounts
+                SET account_ban_permanent = 0, account_ban_until = ?,
+                    banned = 1
+                WHERE username = ?
+            """, (expiry, username))
+
+        db.execute("""
+            DELETE FROM sessions
+            WHERE account_id = (
+                SELECT id FROM accounts WHERE username = ?
+            )
+        """, (username,))
+
+        log_event(db, "ACCOUNT_BANNED", username, row["device_id"])
+
+    return {
+        "success": True,
+        "username": username,
+        "duration": duration,
+        "expires_at": expiry,
+        "status": "banned",
+    }
+
+
+# ==========================================
+# OWNER: UNBAN ACCOUNT
+# ==========================================
+
+@app.post("/owner/unban-account/{username}")
+def owner_unban_account(
+    username: str,
+    _: bool = Depends(require_owner),
+):
+    with database() as db:
+        row = db.execute(
+            "SELECT device_id FROM accounts WHERE username = ?",
+            (username,),
+        ).fetchone()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Account not found")
+
+        db.execute("""
+            UPDATE accounts
+            SET account_ban_permanent = 0, account_ban_until = NULL
+            WHERE username = ?
+        """, (username,))
+
+        updated = db.execute(
+            "SELECT * FROM accounts WHERE username = ?",
+            (username,),
+        ).fetchone()
+        refresh_ban_state(db, updated)
+
