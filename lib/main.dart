@@ -30,7 +30,82 @@ class LovelyProfileScreen extends StatefulWidget {
 }
 
 class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
-  int _currentIndex = 4; // 'Me' tab selected by default
+  int _currentIndex = 4; // 'Me' tab selected
+
+  void _showWithdrawDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1F1635),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Withdraw Earnings',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white54),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Available Diamonds: 0 ($0.00)',
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              const SizedBox(height: 15),
+              TextField(
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Enter Diamond Amount',
+                  labelStyle: const TextStyle(color: Colors.white54),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Colors.pinkAccent),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Colors.white24),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 15),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.pinkAccent,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Withdrawal request submitted!')),
+                    );
+                  },
+                  child: const Text('Submit Request', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +113,7 @@ class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Top Header Background / Banner section
+            // Top Header Section
             Stack(
               children: [
                 Container(
@@ -54,43 +129,39 @@ class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
                 SafeArea(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: Column(
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                            const CircleAvatar(
-                              radius: 32,
-                              backgroundImage: NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                        const CircleAvatar(
+                          radius: 32,
+                          backgroundImage: NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Addison',
+                                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
                                 children: [
-                                  const Text(
-                                    'Addison',
-                                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(10)),
+                                    child: const Text('PK 18', style: TextStyle(fontSize: 10, color: Colors.white)),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(10)),
-                                        child: const Text('PK 18', style: TextStyle(fontSize: 10, color: Colors.white)),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      const Text('ID: 41794595', style: TextStyle(fontSize: 12, color: Colors.white70)),
-                                    ],
-                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text('ID: 41794595', style: TextStyle(fontSize: 12, color: Colors.white70)),
                                 ],
                               ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.settings, color: Colors.white),
-                              onPressed: () {},
-                            ),
-                          ],
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.settings, color: Colors.white),
+                          onPressed: () {},
                         ),
                       ],
                     ),
@@ -140,12 +211,12 @@ class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
                     ),
                   ),
 
-                  // Coins & Diamonds Cards
+                  // Coins & Diamonds Cards with Withdraw Action
                   Row(
                     children: [
                       Expanded(
                         child: Container(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: const Color(0xFF1F1635),
                             borderRadius: BorderRadius.circular(12),
@@ -157,33 +228,51 @@ class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Icon(Icons.monetization_on, color: Colors.amber),
-                                  SizedBox(height: 8),
-                                  Text('0', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                                  SizedBox(height: 4),
+                                  Text('0', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                                 ],
                               ),
                               ElevatedButton(
-                                style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.amber,
+                                  foregroundColor: Colors.black,
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                ),
                                 onPressed: () {},
-                                child: const Text('Recharge'),
+                                child: const Text('Recharge', style: TextStyle(fontSize: 12)),
                               ),
                             ],
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Container(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: const Color(0xFF1F1635),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Icon(Icons.diamond_outlined, color: Colors.pinkAccent),
-                              SizedBox(height: 8),
-                              Text('0', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                              const Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.diamond_outlined, color: Colors.pinkAccent),
+                                  SizedBox(height: 4),
+                                  Text('0', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                                ],
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.pinkAccent,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                ),
+                                onPressed: () => _showWithdrawDialog(context),
+                                child: const Text('Withdraw', style: TextStyle(fontSize: 12)),
+                              ),
                             ],
                           ),
                         ),
@@ -210,7 +299,7 @@ class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
 
                   const SizedBox(height: 16),
 
-                  // Feature Grid Icons (Task, Level, Backpack, Dress Store, etc.)
+                  // Grid Options
                   GridView.count(
                     crossAxisCount: 4,
                     shrinkWrap: true,
@@ -228,14 +317,15 @@ class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
 
                   const Divider(color: Colors.white24, height: 24),
 
-                  // Settings & Services List
+                  // List Options (Including Withdraw Method option)
+                  _buildListTile(Icons.account_balance_wallet, 'Withdraw Method', onTap: () => _showWithdrawDialog(context)),
                   _buildListTile(Icons.star, 'VIP'),
                   _buildListTile(Icons.security, 'Guardian'),
                   _buildListTile(Icons.face, 'Real person detection'),
                   _buildListTile(Icons.help_outline, 'Help & Feedback'),
                   _buildListTile(Icons.headset_mic, 'Customer Service'),
                   _buildListTile(Icons.settings, 'Setting'),
-                  
+
                   const SizedBox(height: 30),
                 ],
               ),
@@ -280,12 +370,12 @@ class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
     );
   }
 
-  Widget _buildListTile(IconData icon, String title) {
+  Widget _buildListTile(IconData icon, String title, {VoidCallback? onTap}) {
     return ListTile(
       leading: Icon(icon, color: Colors.purpleAccent),
       title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 14)),
       trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white54),
-      onTap: () {},
+      onTap: onTap ?? () {},
     );
   }
 }
