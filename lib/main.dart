@@ -176,6 +176,48 @@ class VideoLiveRoomScreen extends StatelessWidget {
   final String roomName;
   const VideoLiveRoomScreen({Key? key, required this.roomName}) : super(key: key);
 
+  void _showVideoSettings(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1F1635),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Video Live Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber)),
+                  IconButton(icon: const Icon(Icons.close, color: Colors.white54), onPressed: () => Navigator.pop(context)),
+                ],
+              ),
+              const SizedBox(height: 10),
+              ListTile(
+                leading: const Icon(Icons.camera_front, color: Colors.pinkAccent),
+                title: const Text('Flip Camera & Filters', style: TextStyle(color: Colors.white)),
+                onTap: () {},
+              ),
+              ListTile(
+                leading: const Icon(Icons.flash_on, color: Colors.amber),
+                title: const Text('Beautification & Makeup', style: TextStyle(color: Colors.white)),
+                onTap: () {},
+              ),
+              ListTile(
+                leading: const Icon(Icons.block, color: Colors.redAccent),
+                title: const Text('Mute / Kick Viewers', style: TextStyle(color: Colors.white)),
+                onTap: () {},
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -201,6 +243,10 @@ class VideoLiveRoomScreen extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(roomName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.settings, color: Colors.white),
+                    onPressed: () => _showVideoSettings(context),
+                  ),
                   IconButton(icon: const Icon(Icons.close, color: Colors.white), onPressed: () => Navigator.pop(context)),
                 ],
               ),
@@ -216,12 +262,89 @@ class AudioPartyRoomScreen extends StatelessWidget {
   final String roomName;
   const AudioPartyRoomScreen({Key? key, required this.roomName}) : super(key: key);
 
+  void _showRoomSettings(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1F1635),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Audio Room Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber)),
+                  IconButton(icon: const Icon(Icons.close, color: Colors.white54), onPressed: () => Navigator.pop(context)),
+                ],
+              ),
+              const SizedBox(height: 10),
+              ListTile(
+                leading: const Icon(Icons.edit, color: Colors.pinkAccent),
+                title: const Text('Edit Room Notice & Name', style: TextStyle(color: Colors.white)),
+                onTap: () {},
+              ),
+              ListTile(
+                leading: const Icon(Icons.lock_outline, color: Colors.purpleAccent),
+                title: const Text('Room Password Lock', style: TextStyle(color: Colors.white)),
+                trailing: Switch(value: false, onChanged: (val) {}, activeColor: Colors.pinkAccent),
+              ),
+              ListTile(
+                leading: const Icon(Icons.mic_off, color: Colors.redAccent),
+                title: const Text('Lock All Seats', style: TextStyle(color: Colors.white)),
+                onTap: () {},
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF090414),
-      appBar: AppBar(backgroundColor: Colors.transparent, title: Text(roomName)),
-      body: const Center(child: Text('Audio Party Room Seats', style: TextStyle(color: Colors.white54))),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        title: Text(roomName),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.white),
+            onPressed: () => _showRoomSettings(context),
+          ),
+        ],
+      ),
+      body: GridView.builder(
+        padding: const EdgeInsets.all(16),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 5,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 12,
+          childAspectRatio: 0.75,
+        ),
+        itemCount: 10,
+        itemBuilder: (context, index) {
+          return Column(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: const Color(0xFF1F1635),
+                child: Icon(
+                  index == 0 ? Icons.mic : Icons.lock,
+                  color: index == 0 ? Colors.purpleAccent : Colors.white30,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text('No.${index + 1}', style: const TextStyle(color: Colors.white54, fontSize: 10)),
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -396,7 +519,7 @@ class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
                   leading: const Icon(Icons.settings, color: Colors.purpleAccent),
                   title: const Text('Setting', style: TextStyle(color: Colors.white)),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white54),
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsPage())),
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsPage())),
                 ),
               ],
             ),
