@@ -236,7 +236,12 @@ class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
                         ),
                         IconButton(
                           icon: const Icon(Icons.settings, color: Colors.white),
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const SettingsPage()),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -394,7 +399,12 @@ class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
                   _buildListTile(Icons.face, 'Real person detection'),
                   _buildListTile(Icons.help_outline, 'Help & Feedback'),
                   _buildListTile(Icons.headset_mic, 'Customer Service'),
-                  _buildListTile(Icons.settings, 'Setting'),
+                  _buildListTile(Icons.settings, 'Setting', onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const SettingsPage()),
+                    );
+                  }),
 
                   const SizedBox(height: 30),
                 ],
@@ -446,6 +456,72 @@ class _LovelyProfileScreenState extends State<LovelyProfileScreen> {
       title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 14)),
       trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white54),
       onTap: onTap ?? () {},
+    );
+  }
+}
+
+class SettingsPage extends StatelessWidget {
+  const SettingsPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Settings & Profile', style: TextStyle(color: Colors.white)),
+        backgroundColor: const Color(0xFF1F1635),
+      ),
+      body: ListView(
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Text('Profile Management', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 16)),
+          ),
+          ListTile(
+            leading: const Icon(Icons.person_outline, color: Colors.pinkAccent),
+            title: const Text('Edit Profile Name & Info', style: TextStyle(color: Colors.white)),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white54),
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Edit Profile settings tapped')),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.badge, color: Colors.pinkAccent),
+            title: const Text('Account ID & Region', style: TextStyle(color: Colors.white)),
+            subtitle: const Text('ID: 41794595 (PK 18)', style: TextStyle(color: Colors.white54, fontSize: 12)),
+            onTap: () {},
+          ),
+          const Divider(color: Colors.white24),
+          const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Text('App Settings', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 16)),
+          ),
+          ListTile(
+            leading: const Icon(Icons.notifications_none, color: Colors.purpleAccent),
+            title: const Text('Notifications', style: TextStyle(color: Colors.white)),
+            trailing: Switch(value: true, onChanged: (val) {}, activeColor: Colors.pinkAccent),
+          ),
+          ListTile(
+            leading: const Icon(Icons.lock_outline, color: Colors.purpleAccent),
+            title: const Text('Privacy & Security', style: TextStyle(color: Colors.white)),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white54),
+            onTap: () {},
+          ),
+          ListTile(
+            leading: const Icon(Icons.language, color: Colors.purpleAccent),
+            title: const Text('Language', style: TextStyle(color: Colors.white)),
+            subtitle: const Text('English', style: TextStyle(color: Colors.white54, fontSize: 12)),
+            onTap: () {},
+          ),
+          ListTile(
+            leading: const Icon(Icons.info_outline, color: Colors.purpleAccent),
+            title: const Text('About Version', style: TextStyle(color: Colors.white)),
+            subtitle: const Text('Lovely Chat v1.0.0', style: TextStyle(color: Colors.white54, fontSize: 12)),
+            onTap: () {},
+          ),
+        ],
+      ),
     );
   }
 }
