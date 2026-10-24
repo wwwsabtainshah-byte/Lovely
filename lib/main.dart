@@ -1325,13 +1325,19 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               borderRadius: BorderRadius.circular(26),
               border: Border.all(
-                color: const Color(0xFFB66DFF).withValues(alpha: 0.45),
+                color: const Color(0xFFD6A6FF),
+                width: 1.3,
               ),
-              boxShadow: [
+              boxShadow: const [
                 BoxShadow(
-                  color: const Color(0xFF8A45FF).withValues(alpha: 0.15),
-                  blurRadius: 22,
-                  offset: const Offset(0, 8),
+                  color: Color(0x664F1C99),
+                  blurRadius: 26,
+                  offset: Offset(0, 10),
+                ),
+                BoxShadow(
+                  color: Color(0x33F4DFFF),
+                  blurRadius: 2,
+                  offset: Offset(0, 2),
                 ),
               ],
             ),
@@ -1536,25 +1542,91 @@ Widget featureCard(
   String subtitle,
   VoidCallback onTap,
 ) {
-  return Card(
-    color: panel,
-    margin: const EdgeInsets.only(bottom: 10),
-    child: ListTile(
-      contentPadding: const EdgeInsets.all(12),
-      leading: CircleAvatar(
-        backgroundColor: purple.withValues(alpha: 0.20),
-        child: Icon(icon, color: purple),
+  return Container(
+    margin: const EdgeInsets.only(bottom: 13),
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0xFF402078),
+          Color(0xFF21113F),
+          Color(0xFF160D2B),
+        ],
       ),
-      title: Text(
-        title,
-        style: const TextStyle(fontWeight: FontWeight.bold),
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: const Color(0xFFB78AFF), width: 1.1),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x663F16A5),
+          blurRadius: 12,
+          offset: Offset(0, 6),
+        ),
+        BoxShadow(
+          color: Color(0x55FFFFFF),
+          blurRadius: 1,
+          offset: Offset(0, 1),
+        ),
+      ],
+    ),
+    child: Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFE0B7FF), Color(0xFF8B45E8), Color(0xFF5524A5)],
+                  ),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: const Color(0xFFFFE4FF), width: 1),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x884F1C99),
+                      blurRadius: 7,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Icon(icon, color: Colors.white, size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        shadows: [Shadow(color: Color(0xAA000000), blurRadius: 4, offset: Offset(0, 2))],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(color: Color(0xFFD8C6F5), fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFE1C7FF), size: 17),
+            ],
+          ),
+        ),
       ),
-      subtitle: Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Text(subtitle),
-      ),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: onTap,
     ),
   );
 }
