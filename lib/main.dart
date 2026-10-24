@@ -22,9 +22,33 @@ class XenaExactApp extends StatelessWidget {
   }
 }
 
-// 1. Exact Login Screen
+// 1. Exact Login Screen with Google Login Integration
 class LoginScreen extends StatelessWidget {
   const LoginScreen({Key? key}) : super(key: key);
+
+  // Simulated Google Login action
+  void _handleGoogleLogin(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1B113A),
+        title: const Text('Google Sign-In', style: TextStyle(color: Colors.white)),
+        content: const Text('Opening Google account selector to sign in...', style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const XenaMainHomeScreen()),
+              );
+            },
+            child: const Text('Continue', style: TextStyle(color: Colors.pinkAccent)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,6 +109,22 @@ class LoginScreen extends StatelessWidget {
                     );
                   },
                   child: const Text('Log In', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Google Login Button
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.white24),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    backgroundColor: const Color(0xFF1B113A),
+                  ),
+                  onPressed: () => _handleGoogleLogin(context),
+                  icon: const Icon(Icons.g_mobiledata, color: Colors.white, size: 28),
+                  label: const Text('Sign in with Google', style: TextStyle(fontSize: 15, color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
