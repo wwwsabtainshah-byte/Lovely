@@ -1,3 +1,4 @@
+import 'new_design/lovely_profile.dart';
 import 'dart:convert';
 import 'dart:math';
 import 'package:http/http.dart' as http;
@@ -385,7 +386,7 @@ class _MainScreenState extends State<MainScreen> {
     VoiceRoomsPage(),
     MomentPage(),
     ChatPage(),
-    ProfilePage(),
+    LovelyNewProfile(),
   ];
 
   @override

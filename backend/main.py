@@ -1755,7 +1755,7 @@ def transfer_diamonds(data: TransferRequest, account=Depends(get_current_account
         )
         db.execute(
             "INSERT INTO wallet_transactions (account_id, amount, transaction_type, description, created_at) VALUES (?, ?, ?, ?, ?)",
-            (receiver["id"], data.amount, f"received_{data.currency}", f"Received {data.amount} {data.currency} from {account["username"]}", hosting_now())
+            (receiver["id"], data.amount, f"received_{data.currency}", f"Received {data.amount} {data.currency} from {account['username']}", hosting_now())
         )
         
         db.commit()
@@ -1900,27 +1900,27 @@ class EndStreamRequest(BaseModel):
 @app.post("/live/start")
 def start_live_stream(data: StartStreamRequest, account=Depends(get_current_account)):
     with database() as db:
-        db.execute(\"\"\"
-            CREATE TABLE IF NOT EXISTS live_rooms (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                account_id INTEGER NOT NULL,
-                title TEXT NOT NULL,
-                cover_url TEXT,
-                status TEXT DEFAULT \"active\",
-                created_at TEXT NOT NULL,
-                FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
-            )
-        \"\")
-        db.commit()
+                db.execute("""
+                    CREATE TABLE IF NOT EXISTS live_rooms (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        account_id INTEGER NOT NULL,
+                        title TEXT NOT NULL,
+                        cover_url TEXT,
+                        status TEXT DEFAULT 'active',
+                        created_at TEXT NOT NULL,
+                        FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
+                )
+                """)
+                db.commit()
         
-        db.execute("UPDATE live_rooms SET status = \"ended\" WHERE account_id = ? AND status = \"active\"", (account["id"],))
+                db.execute("UPDATE live_rooms SET status = \"ended\" WHERE account_id = ? AND status = \"active\"", (account["id"],))
         
-        cursor = db.execute(
-            "INSERT INTO live_rooms (account_id, title, cover_url, status, created_at) VALUES (?, ?, ?, \"active\", ?)",
-            (account["id"], data.title, data.cover_url, hosting_now())
-        )
-        room_id = cursor.lastrowid
-        db.commit()
+                cursor = db.execute(
+                    "INSERT INTO live_rooms (account_id, title, cover_url, status, created_at) VALUES (?, ?, ?, \"active\", ?)",
+                    (account["id"], data.title, data.cover_url, hosting_now())
+                )
+                room_id = cursor.lastrowid
+                db.commit()
         
     return {
         "success": True,
@@ -1928,30 +1928,29 @@ def start_live_stream(data: StartStreamRequest, account=Depends(get_current_acco
         "room_id": room_id,
         "title": data.title
     }
-
 @app.get("/live/rooms")
 def get_live_rooms(account=Depends(get_current_account)):
     with database() as db:
-        db.execute(\"\"\"
+        db.execute("""
             CREATE TABLE IF NOT EXISTS live_rooms (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 account_id INTEGER NOT NULL,
                 title TEXT NOT NULL,
                 cover_url TEXT,
-                status TEXT DEFAULT \"active\",
+                status TEXT DEFAULT 'active',
                 created_at TEXT NOT NULL,
                 FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
             )
-        \"\")
+        """)
         db.commit()
         
-        rows = db.execute(\"\"\"
-            SELECT r.id, r.title, r.cover_url, r.created_at, a.username 
+        rows = db.execute("""
+            SELECT r.id, r.title, r.cover_url, r.created_at, a.username
             FROM live_rooms r
             JOIN accounts a ON r.account_id = a.id
-            WHERE r.status = \"active\"
+            WHERE r.status = 'active'
             ORDER BY r.id DESC
-        \"\").fetchall()
+        """).fetchall()
         
         rooms = [
             {
@@ -2035,7 +2034,7 @@ def get_live_chat_messages(room_id: int, account=Depends(get_current_account)):
             WHERE m.room_id = ?
             ORDER BY m.id DESC
             LIMIT 50
-        "", (room_id,)).fetchall()
+        """, (room_id,)).fetchall()
         
         messages = [
             {
@@ -2822,17 +2821,16 @@ def get_host_withdrawal_history(account=Depends(get_current_account)):
         raise HTTPException(status_code=403, detail="Host role required")
 
     with database() as db:
-        rows = db.execute("""
-            SELECT w.id, w.diamonds, w.usd_cents, w.payment_provider,
-                   w.payment_wallet_number, w.payment_wallet_name,
-                   w.status, w.created_at, w.paid_at,
-                   s.username AS seller_username,
-                   s.user_code AS seller_code
-            FROM diamond_withdrawals w
-            JOIN accounts s ON s.id = w.seller_account_id
-            WHERE w.host_account_id = ?
-            ORDER BY w.id DESC
-        """, (account["id"],)).fetchall()
+        rows = db.execute(
+            "SELECT w.id, w.diamonds, w.usd_cents, w.payment_provider, "
+            "w.payment_wallet_number, w.payment_wallet_name, "
+            "w.status, w.created_at, w.paid_at, "
+            "s.username AS seller_username, s.user_code AS seller_code "
+            "FROM diamond_withdrawals w "
+            "JOIN accounts s ON s.id = w.seller_account_id "
+            "WHERE w.host_account_id = ? ORDER BY w.id DESC",
+            (account["id"],)
+        ).fetchall()
 
     return {
         "success": True,
@@ -2862,17 +2860,16 @@ def get_seller_withdrawals(account=Depends(get_current_account)):
         raise HTTPException(status_code=403, detail="Seller role required")
 
     with database() as db:
-        rows = db.execute("""
-            SELECT w.id, w.diamonds, w.usd_cents, w.payment_provider,
-                   w.payment_wallet_number, w.payment_wallet_name,
-                   w.status, w.created_at, w.paid_at,
-                   h.username AS host_username,
-                   h.user_code AS host_code
-            FROM diamond_withdrawals w
-            JOIN accounts h ON h.id = w.host_account_id
-            WHERE w.seller_account_id = ?
-            ORDER BY w.id DESC
-        """, (account["id"],)).fetchall()
+        rows = db.execute(
+            "SELECT w.id, w.diamonds, w.usd_cents, w.payment_provider, "
+            "w.payment_wallet_number, w.payment_wallet_name, "
+            "w.status, w.created_at, w.paid_at, "
+            "h.username AS host_username, h.user_code AS host_code "
+            "FROM diamond_withdrawals w "
+            "JOIN accounts h ON h.id = w.host_account_id "
+            "WHERE w.seller_account_id = ? ORDER BY w.id DESC",
+            (account["id"],)
+        ).fetchall()
 
     return {
         "success": True,
@@ -2907,20 +2904,16 @@ def seller_mark_withdrawal_paid(
     now = hosting_now()
 
     with database() as db:
-        result = db.execute("""
-            UPDATE diamond_withdrawals
-            SET status = 'paid', paid_at = ?, paid_by = ?
-            WHERE id = ?
-              AND seller_account_id = ?
-              AND status = 'pending_payment'
-        """, (now, account["id"], withdrawal_id, account["id"]))
+        result = db.execute(
+            "UPDATE diamond_withdrawals SET status = 'paid', paid_at = ?, paid_by = ? WHERE id = ? AND seller_account_id = ? AND status = 'pending_payment'",
+            (now, account["id"], withdrawal_id, account["id"])
+        )
 
         if result.rowcount != 1:
-            existing = db.execute("""
-                SELECT id, status
-                FROM diamond_withdrawals
-                WHERE id = ? AND seller_account_id = ?
-            """, (withdrawal_id, account["id"])).fetchone()
+            existing = db.execute(
+                "SELECT id, status FROM diamond_withdrawals WHERE id = ? AND seller_account_id = ?",
+                (withdrawal_id, account["id"])
+            ).fetchone()
 
             if not existing:
                 raise HTTPException(
