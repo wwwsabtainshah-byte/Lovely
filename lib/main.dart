@@ -432,259 +432,360 @@ class _MainScreenState extends State<MainScreen> {
 }
 
 // ---------------- LOVELY CHAT VIDEO ROOMS ----------------
-class VideoRoomsPage extends StatelessWidget {
+
+class VideoRoomsPage extends StatefulWidget {
   const VideoRoomsPage({super.key});
 
-  void _showRoomInfo(BuildContext context, String title) {
-    showInfo(
-      context,
-      title,
-      'یہ Lovely Chat روم کا ڈیزائن ہے۔ حقیقی ویڈیو، LIVE اور روم ڈیٹا کے لیے سرور، اجازت اور streaming integration درکار ہے۔',
+  @override
+  State<VideoRoomsPage> createState() => _VideoRoomsPageState();
+}
+
+class _VideoRoomsPageState extends State<VideoRoomsPage> {
+  int _tab = 1;
+  final Set<int> _liked = {};
+  final Set<int> _followed = {};
+
+  final List<Map<String, String>> _clips = const [
+    {
+      'name': 'Lovely Star',
+      'caption': 'Welcome to Lovely Chat 💜',
+      'song': '♪ Lovely vibes',
+      'avatar': '🌟',
+    },
+    {
+      'name': 'Xena Queen',
+      'caption': 'Make every moment beautiful ✨',
+      'song': '♪ Trending sound',
+      'avatar': '👑',
+    },
+    {
+      'name': 'Lovely Friends',
+      'caption': 'Meet new friends around the world 🌍',
+      'song': '♪ Original audio',
+      'avatar': '💜',
+    },
+  ];
+
+  void _message(String title, String message) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _roomCard(
-    BuildContext context,
-    String title,
-    String subtitle,
-    IconData icon,
-    Color accent,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [panel, bg],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  Widget _action({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    Color color = Colors.white,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 19),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(30),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 31),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: accent.withValues(alpha: 0.35)),
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(14),
-        leading: CircleAvatar(
-          radius: 27,
-          backgroundColor: accent.withValues(alpha: 0.18),
-          child: Icon(icon, color: accent, size: 28),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 5),
-          child: Text(
-            subtitle,
-            style: const TextStyle(color: Colors.white60, fontSize: 12),
+    );
+  }
+
+  Widget _clip(int index) {
+    final item = _clips[index % _clips.length];
+    final liked = _liked.contains(index);
+    final followed = _followed.contains(index);
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF241047),
+                Color(0xFF6B238E),
+                Color(0xFF171126),
+                Color(0xFF08070D),
+              ],
+            ),
           ),
         ),
-        trailing: Icon(Icons.arrow_forward_ios, size: 15, color: accent),
-        onTap: () => _showRoomInfo(context, title),
-      ),
-    );
-  }
-
-  Widget _actionCard(
-    BuildContext context,
-    IconData icon,
-    String title,
-    String subtitle,
-  ) {
-    return _roomCard(context, title, subtitle, icon, pink);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        body: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
-                child: Row(
-                  children: [
-                    const Icon(Icons.favorite, color: pink, size: 29),
-                    const SizedBox(width: 9),
-                    const Expanded(
-                      child: Text(
-                        'Lovely Chat',
-                        style: TextStyle(
-                          fontSize: 25,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Discover',
-                      onPressed: () => _showRoomInfo(context, 'Discover Videos'),
-                      icon: const Icon(Icons.search),
-                    ),
-                  ],
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.play_circle_outline_rounded,
+                  color: Colors.white70,
+                  size: 76,
                 ),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 18),
-                child: Text(
-                  'Discover your next favourite room',
-                  style: TextStyle(color: Colors.white60, fontSize: 13),
+                const SizedBox(height: 12),
+                const Text(
+                  'Lovely Video',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 23,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              const TabBar(
-                indicatorColor: pink,
-                labelColor: pink,
-                unselectedLabelColor: Colors.white60,
-                tabs: [
-                  Tab(text: 'Hot'),
-                  Tab(text: 'Party'),
-                  Tab(text: 'Follow'),
+                const SizedBox(height: 7),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black26,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'Video source will appear here',
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => _message(
+                      'LIVE',
+                      'Live video streaming ko real streaming service aur backend se connect karna hoga.',
+                    ),
+                    icon: const Icon(Icons.live_tv, color: Colors.white),
+                  ),
+                  const Spacer(),
+                  _topTab('Following', 0),
+                  const SizedBox(width: 16),
+                  _topTab('For You', 1),
+                  const SizedBox(width: 16),
+                  IconButton(
+                    onPressed: () => _message(
+                      'Search',
+                      'Video search ko server feed se connect karna baqi hai.',
+                    ),
+                    icon: const Icon(Icons.search, color: Colors.white, size: 28),
+                  ),
                 ],
               ),
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    ListView(
-                      padding: const EdgeInsets.all(16),
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(18),
-                          margin: const EdgeInsets.only(bottom: 18),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF512477), Color(0xFF21143D)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Icon(Icons.live_tv, size: 34),
-                              const SizedBox(height: 10),
-                              const Text(
-                                'Your moment. Your community.',
-                                style: TextStyle(
-                                  fontSize: 19,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              const Text(
-                                'Join rooms, meet people and discover creators.',
-                                style: TextStyle(color: Colors.white70),
-                              ),
-                              const SizedBox(height: 14),
-                              FilledButton.icon(
-                                onPressed: () => _showRoomInfo(context, 'Start Video LIVE'),
-                                icon: const Icon(Icons.videocam),
-                                label: const Text('Start Video LIVE'),
-                              ),
-                            ],
-                          ),
-                        ),
-                        _roomCard(
-                          context,
-                          'Lovely Official Room',
-                          'Video Rooms  •  Featured',
-                          Icons.video_camera_front,
-                          pink,
-                        ),
-                        _roomCard(
-                          context,
-                          'Royal Music & Chat',
-                          'Music  •  Community',
-                          Icons.music_note,
-                          purple,
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Explore more',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 10),
-                        _actionCard(
-                          context,
-                          Icons.groups,
-                          'Multi-Guest LIVE',
-                          '2, 4, 6 or 9 participants',
-                        ),
-                        _actionCard(
-                          context,
-                          Icons.bolt,
-                          'PK Battle',
-                          'Live battles and gifts',
-                        ),
-                        _actionCard(
-                          context,
-                          Icons.explore,
-                          'Discover Videos',
-                          'Explore creators and videos',
-                        ),
-                      ],
-                    ),
-                    ListView(
-                      padding: const EdgeInsets.all(16),
-                      children: [
-                        _roomCard(
-                          context,
-                          'Lovely Friends Party',
-                          'Party Room  •  Join the community',
-                          Icons.groups,
-                          purple,
-                        ),
-                        _roomCard(
-                          context,
-                          'Music & Chat Party',
-                          'Music  •  Meet new friends',
-                          Icons.graphic_eq,
-                          pink,
-                        ),
-                        _roomCard(
-                          context,
-                          'Create Your Own Room',
-                          'Your room, your community',
-                          Icons.add_circle_outline,
-                          Colors.amber,
-                        ),
-                      ],
-                    ),
-                    ListView(
-                      padding: const EdgeInsets.all(16),
-                      children: [
-                        _roomCard(
-                          context,
-                          'Followed Creators',
-                          'Updates from creators you follow',
-                          Icons.favorite,
-                          pink,
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 20),
-                          child: Center(
-                            child: Text(
-                              'Follow creators to discover their rooms here.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: Colors.white60),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+            ),
+          ),
+        ),
+        Positioned(
+          right: 12,
+          bottom: 112,
+          child: Column(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1.5),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF70C8), Color(0xFF7C4DFF)],
+                  ),
                 ),
+                child: Center(
+                  child: Text(
+                    item['avatar']!,
+                    style: const TextStyle(fontSize: 23),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              _action(
+                icon: liked ? Icons.favorite : Icons.favorite_border,
+                label: liked ? 'Liked' : 'Like',
+                color: liked ? Colors.pinkAccent : Colors.white,
+                onTap: () => setState(() {
+                  if (liked) {
+                    _liked.remove(index);
+                  } else {
+                    _liked.add(index);
+                  }
+                }),
+              ),
+              _action(
+                icon: Icons.mode_comment_outlined,
+                label: 'Comment',
+                onTap: () => _message(
+                  'Comments',
+                  'Comments ko backend API se connect karna baqi hai.',
+                ),
+              ),
+              _action(
+                icon: Icons.bookmark_border,
+                label: 'Save',
+                onTap: () => _message('Save video', 'Save feature abhi demo hai.'),
+              ),
+              _action(
+                icon: Icons.card_giftcard,
+                label: 'Gift',
+                color: const Color(0xFFFF80C8),
+                onTap: () => _message(
+                  'Send Gift',
+                  'Real gifts aur coins ke liye existing wallet API connect karni hogi.',
+                ),
+              ),
+              _action(
+                icon: Icons.share_outlined,
+                label: 'Share',
+                onTap: () => _message('Share', 'Video sharing integration baqi hai.'),
               ),
             ],
           ),
         ),
+        Positioned(
+          left: 16,
+          right: 88,
+          bottom: 28,
+          child: SafeArea(
+            top: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        '@${item['name']}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    OutlinedButton(
+                      onPressed: () => setState(() {
+                        if (followed) {
+                          _followed.remove(index);
+                        } else {
+                          _followed.add(index);
+                        }
+                      }),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.white70),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        minimumSize: const Size(0, 32),
+                      ),
+                      child: Text(followed ? 'Following' : 'Follow'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 7),
+                Text(
+                  item['caption']!,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.music_note, color: Colors.white, size: 17),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: Text(
+                        item['song']!,
+                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _topTab(String title, int value) {
+    final selected = _tab == value;
+    return GestureDetector(
+      onTap: () => setState(() => _tab = value),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              color: selected ? Colors.white : Colors.white70,
+              fontSize: 15,
+              fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+          const SizedBox(height: 5),
+          if (selected)
+            Container(
+              width: 24,
+              height: 3,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF70C8),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: PageView.builder(
+        scrollDirection: Axis.vertical,
+        itemCount: 30,
+        itemBuilder: (context, index) => _clip(index),
       ),
     );
   }
 }
+
 
 // ---------------- VOICE ROOMS ----------------
 
