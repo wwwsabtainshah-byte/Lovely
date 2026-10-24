@@ -1251,8 +1251,42 @@ class _ChatPageState extends State<ChatPage> {
   }
 }
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  Map<String, dynamic>? account;
+  bool accountLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    loadProfile();
+  }
+
+  Future<void> loadProfile() async {
+    try {
+      final token = await lovelyStorage.read(key: 'lovely_token');
+      if (token == null) {
+        if (mounted) setState(() => accountLoading = false);
+        return;
+      }
+      final response = await http.get(
+        Uri.parse('$lovelyApi/me'),
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        account = jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (_) {
+      // Keep the profile usable if the server is temporarily unavailable.
+    }
+    if (mounted) setState(() => accountLoading = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1323,8 +1357,8 @@ class ProfilePage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 13),
-                const Text(
-                  'Lovely User',
+                Text(
+                  account?['username']?.toString() ?? 'Lovely User',
                   style: TextStyle(
                     fontSize: 23,
                     fontWeight: FontWeight.bold,
@@ -1341,8 +1375,8 @@ class ProfilePage extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text(
-                    'ID: Pending server account',
+                  child: Text(
+                    'ID: ${account?['user_code']?.toString() ?? 'Pending'}',
                     style: TextStyle(
                       color: Colors.white70,
                       fontSize: 12,
@@ -1427,6 +1461,28 @@ class ProfilePage extends StatelessWidget {
               'Yeh feature aglay marhalay mein shamil hoga.',
             ),
           ),
+          if (account?['role'] == 'bd')
+            featureCard(
+              Icons.business_center_rounded,
+              'BD Center',
+              'BD account tools and targets',
+              () => showInfo(
+                context,
+                'BD Center',
+                'BD tools ko secure backend endpoints se connect karna baqi hai.',
+              ),
+            ),
+          if (account?['role'] == 'super_admin')
+            featureCard(
+              Icons.admin_panel_settings_rounded,
+              'Super Admin Panel',
+              'Authorized owner controls',
+              () => showInfo(
+                context,
+                'Super Admin Panel',
+                'Admin controls ko secure backend endpoints se connect karna baqi hai.',
+              ),
+            ),
           const SizedBox(height: 12),
           Center(
             child: Text(
