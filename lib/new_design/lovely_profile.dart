@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -33,10 +34,39 @@ Future<String> fetchLovelyOriginalId() async {
 }
 
 
-class LovelyNewProfile extends StatelessWidget {
+Future<Map<String, dynamic>> fetchLovelyProfile() async {
+  final token = await lovelyStorage.read(key: 'lovely_token');
+  if (token == null || token.isEmpty) return <String, dynamic>{};
+  try {
+    final response = await http.get(
+      Uri.parse('$lovelyApi/me'),
+      headers: {'Authorization': 'Bearer $token'},
+    ).timeout(const Duration(seconds: 12));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) return data;
+    }
+  } catch (_) {}
+  return <String, dynamic>{};
+}
+
+class LovelyNewProfile extends StatefulWidget {
   const LovelyNewProfile({super.key});
 
+  @override
+  State<LovelyNewProfile> createState() => _LovelyNewProfileState();
+}
+
+class _LovelyNewProfileState extends State<LovelyNewProfile> {
   static const purple = Color(0xFF9B6DFF);
+  late Future<Map<String, dynamic>> _profileFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _profileFuture = fetchLovelyProfile();
+  }
+
 
   Widget button(BuildContext context, IconData icon, String name, {VoidCallback? onTap}) {
     return Container(
@@ -97,9 +127,28 @@ class LovelyNewProfile extends StatelessWidget {
             ),
             child: Column(
               children: [
-                const CircleAvatar(radius: 43, child: Icon(Icons.person, size: 48)),
-                const SizedBox(height: 10),
-                const Text('Lovely User', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                FutureBuilder<Map<String, dynamic>>(
+              future: _profileFuture,
+              builder: (context, snapshot) {
+                final profile = snapshot.data ?? <String, dynamic>{};
+                final photo = (profile['profile_photo'] ?? '').toString();
+                final name = (profile['display_name'] ?? '').toString();
+                ImageProvider? image;
+                if (photo.startsWith('data:image/') && photo.contains(',')) {
+                  try { image = MemoryImage(base64Decode(photo.split(',').last)); } catch (_) {}
+                }
+                return Column(children: [
+                  CircleAvatar(
+                    radius: 43,
+                    backgroundImage: image,
+                    child: image == null ? const Icon(Icons.person, size: 48) : null,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(name.isEmpty ? 'Lovely User' : name,
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                ]);
+              },
+            ),
                 FutureBuilder<String>(
   future: fetchLovelyOriginalId(),
   builder: (context, snapshot) => Text(
@@ -111,10 +160,19 @@ class LovelyNewProfile extends StatelessWidget {
                   alignment: Alignment.centerRight,
                   child: IconButton(
                     icon: const Icon(Icons.chevron_right_rounded, size: 30),
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LovelyEditProfilePage()),
-                    ),
+                    onPressed: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const LovelyEditProfilePage(),
+                            ),
+                          );
+                          if (mounted) {
+                            setState(() {
+                              _profileFuture = fetchLovelyProfile();
+                            });
+                          }
+                        },
                   ),
                 ),
                 const Row(
@@ -230,16 +288,146 @@ class LovelyNewProfile extends StatelessWidget {
   }
 }
 
-class LovelyEditProfilePage extends StatelessWidget {
+class LovelyEditProfilePage extends StatefulWidget {
   const LovelyEditProfilePage({super.key});
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Edit Profile')),
-    body: const ListTile(
-      title: Text('Photo • Name • Region • Bio'),
-      subtitle: Text('Profile editing will connect to your account API.'),
-    ),
-  );
+  State<LovelyEditProfilePage> createState() => _LovelyEditProfilePageState();
+}
+
+class _LovelyEditProfilePageState extends State<LovelyEditProfilePage> {
+  final _name = TextEditingController();
+  final _picker = ImagePicker();
+  String _photo = '';
+  bool _loading = true, _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final profile = await fetchLovelyProfile();
+    if (!mounted) return;
+    _name.text = (profile['display_name'] ?? '').toString();
+    _photo = (profile['profile_photo'] ?? '').toString();
+    setState(() => _loading = false);
+  }
+
+  Future<void> _choosePhoto() async {
+    try {
+      final file = await _picker.pickImage(
+        source: ImageSource.gallery, imageQuality: 65,
+        maxWidth: 800, maxHeight: 800,
+      );
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
+      if (bytes.length > 1800000) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Photo too large. Choose a smaller photo.')),
+          );
+        }
+        return;
+      }
+      final mime = file.name.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+      setState(() => _photo = 'data:$mime;base64,${base64Encode(bytes)}');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Photo error: $e')));
+      }
+    }
+  }
+
+  Future<void> _save() async {
+    final name = _name.text.trim();
+    if (name.isEmpty || name.length > 40) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Name must be 1–40 characters.')),
+      );
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      final token = await lovelyStorage.read(key: 'lovely_token');
+      if (token == null || token.isEmpty) throw Exception('Please login again.');
+      final response = await http.put(
+        Uri.parse('$lovelyApi/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'display_name': name, 'profile_photo': _photo}),
+      ).timeout(const Duration(seconds: 30));
+      if (response.statusCode != 200) {
+        throw Exception('Server ${response.statusCode}: ${response.body}');
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile saved successfully.')),
+      );
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Save failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ImageProvider? image;
+    if (_photo.startsWith('data:image/') && _photo.contains(',')) {
+      try { image = MemoryImage(base64Decode(_photo.split(',').last)); } catch (_) {}
+    }
+    return Scaffold(
+      appBar: AppBar(title: const Text('Edit Profile')),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(padding: const EdgeInsets.all(20), children: [
+              Center(
+                child: GestureDetector(
+                  onTap: _choosePhoto,
+                  child: CircleAvatar(
+                    radius: 52, backgroundImage: image,
+                    child: image == null ? const Icon(Icons.add_a_photo, size: 35) : null,
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _choosePhoto,
+                icon: const Icon(Icons.photo_library),
+                label: const Text('Choose profile photo'),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _name, maxLength: 40,
+                decoration: const InputDecoration(
+                  labelText: 'Your name', border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person),
+                ),
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: _saving ? null : _save,
+                child: _saving
+                    ? const SizedBox(width: 20, height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Save Profile'),
+              ),
+            ]),
+    );
+  }
 }
 
 class LovelySettingsPage extends StatelessWidget {

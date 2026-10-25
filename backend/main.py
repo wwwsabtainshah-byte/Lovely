@@ -741,7 +741,8 @@ def google_login(data: dict):
 def my_account(account=Depends(get_current_account)):
     with database() as db:
         current = db.execute(
-            "SELECT id, username, approved, banned, role, user_code "
+            "SELECT id, username, approved, banned, role, user_code, "
+            "display_name, profile_photo "
             "FROM accounts WHERE id = ?",
             (account["id"],),
         ).fetchone()
@@ -774,7 +775,8 @@ def my_account(account=Depends(get_current_account)):
                 (str(candidate), current["id"]),
             )
             current = db.execute(
-                "SELECT id, username, approved, banned, role, user_code "
+                "SELECT id, username, approved, banned, role, user_code, "
+            "display_name, profile_photo "
                 "FROM accounts WHERE id = ?",
                 (current["id"],),
             ).fetchone()
@@ -785,11 +787,33 @@ def my_account(account=Depends(get_current_account)):
             "banned": bool(current["banned"]),
             "role": current["role"] or "user",
             "user_code": current["user_code"],
+        "display_name": current["display_name"] or "",
+        "profile_photo": current["profile_photo"] or "",
             "message": "Authenticated",
         }
 
 
 # ==========================================
+@app.put("/profile")
+def update_my_profile(payload: dict, account=Depends(get_current_account)):
+    display_name = str(payload.get("display_name", "")).strip()
+    profile_photo = str(payload.get("profile_photo", "")).strip()
+
+    if not display_name or len(display_name) > 40:
+        raise HTTPException(status_code=400, detail="Name must contain 1 to 40 characters")
+    if len(profile_photo) > 2_500_000:
+        raise HTTPException(status_code=413, detail="Photo is too large")
+    if profile_photo and not profile_photo.startswith("data:image/"):
+        raise HTTPException(status_code=400, detail="Invalid profile photo")
+
+    with database() as db:
+        db.execute(
+            "UPDATE accounts SET display_name = ?, profile_photo = ? WHERE id = ?",
+            (display_name, profile_photo, account["id"]),
+        )
+    return {"success": True, "display_name": display_name, "profile_photo": profile_photo}
+
+
 # OWNER: PENDING APPROVALS
 # ==========================================
 
