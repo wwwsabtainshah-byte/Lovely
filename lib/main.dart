@@ -1327,6 +1327,7 @@ class _VoiceRoomsPageState extends State<VoiceRoomsPage> {
               hostName: room['host'] as String,
               seatCount: room['seats'] as int,
               roomId: room['room_id'] as int,
+              isHost: true,
             ),
           ),
         );
@@ -1440,6 +1441,7 @@ class VoiceRoomDetailPage extends StatefulWidget {
   final String hostName;
   final int seatCount;
   final int roomId;
+  final bool isHost;
 
   const VoiceRoomDetailPage({
     super.key,
@@ -1447,6 +1449,7 @@ class VoiceRoomDetailPage extends StatefulWidget {
     required this.hostName,
     required this.seatCount,
     required this.roomId,
+    this.isHost = false,
   });
 
   @override
@@ -1835,6 +1838,35 @@ class _VoiceRoomDetailPageState extends State<VoiceRoomDetailPage> {
   }
 
   Future<void> _leaveRoom() async {
+    if (widget.isHost) {
+      try {
+        final token = await _roomToken();
+        if (token == null || token.isEmpty) {
+          throw Exception('Login required');
+        }
+
+        final response = await http.post(
+          Uri.parse('$lovelyApi/live/stop'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({'room_id': widget.roomId}),
+        ).timeout(const Duration(seconds: 12));
+
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          throw Exception('Server response ${response.statusCode}');
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('LIVE band nahi hua: $e')),
+          );
+        }
+        return;
+      }
+    }
+
     _chatTimer?.cancel();
     _chatTimer = null;
     await _closeVoice();

@@ -2358,6 +2358,91 @@ def equip_inventory_item(data: EquipItemRequest, account=Depends(get_current_acc
 
 
 
+
+# LOVELY LIVE HOST VERIFICATION
+def ensure_live_verification_schema():
+    with database() as db:
+        cols = {r["name"] for r in db.execute("PRAGMA table_info(accounts)").fetchall()}
+        if "live_verified" not in cols:
+            db.execute("ALTER TABLE accounts ADD COLUMN live_verified INTEGER NOT NULL DEFAULT 0")
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS live_verification_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id INTEGER NOT NULL UNIQUE,
+                video_reference TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'pending',
+                submitted_at TEXT NOT NULL,
+                reviewed_at TEXT,
+                reviewed_by TEXT,
+                FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
+            )
+        """)
+
+ensure_live_verification_schema()
+
+
+@app.get("/live/verification/status")
+def live_verification_status(account=Depends(get_current_account)):
+    with database() as db:
+        row = db.execute(
+            "SELECT live_verified FROM accounts WHERE id = ?",
+            (account["id"],)
+        ).fetchone()
+        request = db.execute(
+            "SELECT status, submitted_at FROM live_verification_requests WHERE account_id = ?",
+            (account["id"],)
+        ).fetchone()
+    return {
+        "verified": bool(row and row["live_verified"]),
+        "status": request["status"] if request else "not_submitted",
+        "submitted_at": request["submitted_at"] if request else None
+    }
+
+
+@app.get("/owner/live-verification/pending")
+def owner_pending_live_verifications(account=Depends(get_current_account)):
+    if account.get("role") != "owner":
+        raise HTTPException(status_code=403, detail="Owner access required")
+    with database() as db:
+        rows = db.execute("""
+            SELECT r.id, a.username, r.status, r.submitted_at
+            FROM live_verification_requests r
+            JOIN accounts a ON a.id = r.account_id
+            WHERE r.status = 'pending'
+            ORDER BY r.id ASC
+        """).fetchall()
+    return {"requests": [dict(r) for r in rows]}
+
+
+@app.post("/owner/live-verification/{username}/approve")
+def owner_approve_live_verification(username: str, account=Depends(get_current_account)):
+    if account.get("role") != "owner":
+        raise HTTPException(status_code=403, detail="Owner access required")
+    with database() as db:
+        target = db.execute(
+            "SELECT id FROM accounts WHERE username = ? AND banned = 0",
+            (username,)
+        ).fetchone()
+        if not target:
+            raise HTTPException(status_code=404, detail="Account not found or banned")
+        request = db.execute(
+            "SELECT id FROM live_verification_requests WHERE account_id = ? AND status = 'pending'",
+            (target["id"],)
+        ).fetchone()
+        if not request:
+            raise HTTPException(status_code=404, detail="Pending LIVE verification not found")
+        db.execute(
+            "UPDATE accounts SET live_verified = 1 WHERE id = ?",
+            (target["id"],)
+        )
+        db.execute("""
+            UPDATE live_verification_requests
+            SET status = 'approved', reviewed_at = ?, reviewed_by = ?
+            WHERE account_id = ?
+        """, (hosting_now(), account["username"], target["id"]))
+    return {"success": True, "username": username, "status": "approved"}
+
+
 class StartStreamRequest(BaseModel):
     title: str
     cover_url: str = ""
@@ -2368,37 +2453,15 @@ class EndStreamRequest(BaseModel):
 @app.post("/live/start")
 def start_live_stream(data: StartStreamRequest, account=Depends(get_current_account)):
     with database() as db:
-                db.execute("""
-                    CREATE TABLE IF NOT EXISTS live_rooms (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        account_id INTEGER NOT NULL,
-                        title TEXT NOT NULL,
-                        cover_url TEXT,
-                        status TEXT DEFAULT 'active',
-                        created_at TEXT NOT NULL,
-                        FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
-                )
-                """)
-                db.commit()
-        
-                db.execute("UPDATE live_rooms SET status = \"ended\" WHERE account_id = ? AND status = \"active\"", (account["id"],))
-        
-                cursor = db.execute(
-                    "INSERT INTO live_rooms (account_id, title, cover_url, status, created_at) VALUES (?, ?, ?, \"active\", ?)",
-                    (account["id"], data.title, data.cover_url, hosting_now())
-                )
-                room_id = cursor.lastrowid
-                db.commit()
-        
-    return {
-        "success": True,
-        "message": "Live stream started successfully",
-        "room_id": room_id,
-        "title": data.title
-    }
-@app.get("/live/rooms")
-def get_live_rooms(account=Depends(get_current_account)):
-    with database() as db:
+        verification = db.execute(
+            "SELECT live_verified FROM accounts WHERE id = ?",
+            (account["id"],)
+        ).fetchone()
+        if not verification or not verification["live_verified"]:
+            raise HTTPException(
+                status_code=403,
+                detail="LIVE verification pending Owner approval"
+            )
         db.execute("""
             CREATE TABLE IF NOT EXISTS live_rooms (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2411,44 +2474,151 @@ def get_live_rooms(account=Depends(get_current_account)):
             )
         """)
         db.commit()
-        
-        rows = db.execute("""
-            SELECT r.id, r.title, r.cover_url, r.created_at, a.username
-            FROM live_rooms r
-            JOIN accounts a ON r.account_id = a.id
-            WHERE r.status = 'active'
-            ORDER BY r.id DESC
-        """).fetchall()
-        
-        rooms = [
-            {
-                "room_id": r["id"],
-                "title": r["title"],
-                "cover_url": r["cover_url"],
-                "host_username": r["username"],
-                "created_at": r["created_at"]
-            }
-            for r in rows
-        ]
-        
-    return {"success": True, "rooms": rooms}
 
-@app.post("/live/end")
-def end_live_stream(data: EndStreamRequest, account=Depends(get_current_account)):
-    with database() as db:
         db.execute(
-            "UPDATE live_rooms SET status = \"ended\" WHERE id = ? AND account_id = ?",
-            (data.room_id, account["id"])
+            "UPDATE live_rooms SET status = 'ended' WHERE account_id = ? AND status = 'active'",
+            (account["id"],)
         )
+
+        cursor = db.execute(
+            "INSERT INTO live_rooms (account_id, title, cover_url, status, created_at) VALUES (?, ?, ?, 'active', ?)",
+            (account["id"], data.title, data.cover_url, hosting_now())
+        )
+        room_id = cursor.lastrowid
         db.commit()
-        
-    return {"success": True, "message": "Live stream ended"}
+
+    return {
+        "success": True,
+        "message": "LIVE room created",
+        "room_id": room_id,
+        "title": data.title,
+        "cover_url": data.cover_url,
+        "status": "active",
+    }
 
 
 
-class SendMessageRequest(BaseModel):
+class LiveChatMessageRequest(BaseModel):
     room_id: int
     message: str
+
+
+@app.post("/live/stop")
+def stop_live_stream(data: EndStreamRequest, account=Depends(get_current_account)):
+    with database() as db:
+        room = db.execute(
+            "SELECT id, account_id FROM live_rooms WHERE id = ? AND status = 'active'",
+            (data.room_id,)
+        ).fetchone()
+
+        if not room:
+            raise HTTPException(status_code=404, detail="Active LIVE room not found")
+
+        if room["account_id"] != account["id"]:
+            raise HTTPException(status_code=403, detail="Only the room host can stop this LIVE")
+
+        db.execute(
+            "UPDATE live_rooms SET status = 'ended' WHERE id = ?",
+            (data.room_id,)
+        )
+
+    return {"success": True, "room_id": data.room_id, "status": "ended"}
+
+
+@app.get("/live/rooms")
+def list_live_rooms(account=Depends(get_current_account)):
+    with database() as db:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS live_rooms (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                cover_url TEXT,
+                status TEXT DEFAULT 'active',
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
+            )
+        """)
+        rows = db.execute("""
+            SELECT r.id AS room_id, r.title, r.cover_url,
+                   r.created_at, a.username AS host_username
+            FROM live_rooms r
+            JOIN accounts a ON a.id = r.account_id
+            WHERE r.status = 'active' AND a.banned = 0
+            ORDER BY r.id DESC
+        """).fetchall()
+    return {"success": True, "rooms": [dict(row) for row in rows]}
+
+
+@app.get("/live/chat/messages/{room_id}")
+def get_live_chat_messages(room_id: int, account=Depends(get_current_account)):
+    with database() as db:
+        room = db.execute(
+            "SELECT id FROM live_rooms WHERE id = ? AND status = 'active'",
+            (room_id,)
+        ).fetchone()
+        if not room:
+            raise HTTPException(status_code=404, detail="Live room not found")
+
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS live_chat_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                room_id INTEGER NOT NULL,
+                account_id INTEGER NOT NULL,
+                message TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(room_id) REFERENCES live_rooms(id) ON DELETE CASCADE,
+                FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
+            )
+        """)
+        rows = db.execute("""
+            SELECT a.username, m.message, m.created_at
+            FROM live_chat_messages m
+            JOIN accounts a ON a.id = m.account_id
+            WHERE m.room_id = ?
+            ORDER BY m.id DESC
+            LIMIT 100
+        """, (room_id,)).fetchall()
+
+    return {"success": True, "messages": [dict(row) for row in reversed(rows)]}
+
+
+@app.post("/live/chat/send")
+def send_live_chat_message(
+    data: LiveChatMessageRequest,
+    account=Depends(get_current_account)
+):
+    message = data.message.strip()
+    if not message or len(message) > 500:
+        raise HTTPException(status_code=400, detail="Message must be 1-500 characters")
+
+    with database() as db:
+        room = db.execute(
+            "SELECT id FROM live_rooms WHERE id = ? AND status = 'active'",
+            (data.room_id,)
+        ).fetchone()
+        if not room:
+            raise HTTPException(status_code=404, detail="Live room not found")
+
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS live_chat_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                room_id INTEGER NOT NULL,
+                account_id INTEGER NOT NULL,
+                message TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(room_id) REFERENCES live_rooms(id) ON DELETE CASCADE,
+                FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
+            )
+        """)
+        db.execute("""
+            INSERT INTO live_chat_messages
+                (room_id, account_id, message, created_at)
+            VALUES (?, ?, ?, ?)
+        """, (data.room_id, account["id"], message, hosting_now()))
+
+    return {"success": True, "message": "Message sent"}
+
 
 class SendGiftRequest(BaseModel):
     room_id: int
@@ -2456,65 +2626,6 @@ class SendGiftRequest(BaseModel):
     gift_name: str
     gift_price: int
     quantity: int = 1
-
-@app.post("/live/chat/send")
-def send_live_chat_message(data: SendMessageRequest, account=Depends(get_current_account)):
-    with database() as db:
-        db.execute("""
-            CREATE TABLE IF NOT EXISTS live_messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                room_id INTEGER NOT NULL,
-                account_id INTEGER NOT NULL,
-                message TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
-            )
-        """)
-        db.commit()
-        
-        db.execute(
-            "INSERT INTO live_messages (room_id, account_id, message, created_at) VALUES (?, ?, ?, ?)",
-            (data.room_id, account["id"], data.message, hosting_now())
-        )
-        db.commit()
-        
-    return {"success": True, "message": "Message sent"}
-
-@app.get("/live/chat/messages/{room_id}")
-def get_live_chat_messages(room_id: int, account=Depends(get_current_account)):
-    with database() as db:
-        db.execute("""
-            CREATE TABLE IF NOT EXISTS live_messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                room_id INTEGER NOT NULL,
-                account_id INTEGER NOT NULL,
-                message TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
-            )
-        """)
-        db.commit()
-        
-        rows = db.execute("""
-            SELECT m.id, m.message, m.created_at, a.username 
-            FROM live_messages m
-            JOIN accounts a ON m.account_id = a.id
-            WHERE m.room_id = ?
-            ORDER BY m.id DESC
-            LIMIT 50
-        """, (room_id,)).fetchall()
-        
-        messages = [
-            {
-                "id": r["id"],
-                "username": r["username"],
-                "message": r["message"],
-                "created_at": r["created_at"]
-            }
-            for r in rows
-        ]
-        
-    return {"success": True, "messages": messages[::-1]}
 
 @app.post("/live/gift/send")
 def send_live_gift(data: SendGiftRequest, account=Depends(get_current_account)):
@@ -2888,7 +2999,6 @@ def create_host(
 ):
     return assign_lovely_role(data, account, "agent", "host")
 
-
 # LOVELY DIAMOND WITHDRAWAL SYSTEM V1
 DIAMONDS_PER_USD = 1_500_000
 
@@ -2994,7 +3104,6 @@ def save_host_payment_wallet(
         "wallet_number": number,
         "wallet_name": data.wallet_name.strip(),
     }
-
 
 @app.get("/wallet/payment-method")
 def get_host_payment_wallet(account=Depends(get_current_account)):
