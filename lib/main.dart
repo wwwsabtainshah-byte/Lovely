@@ -2837,12 +2837,34 @@ class _ProfilePageState extends State<ProfilePage> {
                     color: Colors.white.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text(
-                    'ID: ${account?['user_code']?.toString() ?? 'Pending'}',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'ID: ${account?['user_code']?.toString() ?? 'Pending'}',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: () async {
+                          final id = (account?['user_code'] ?? '').toString();
+                          if (id.isEmpty) return;
+                          await Clipboard.setData(ClipboardData(text: id));
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('ID Copied')),
+                          );
+                        },
+                        child: const Icon(
+                          Icons.copy_rounded,
+                          size: 17,
+                          color: Color(0xFFD29AFF),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 24),
