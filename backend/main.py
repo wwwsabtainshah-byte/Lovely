@@ -3208,3 +3208,22 @@ def seller_mark_withdrawal_paid(
         ),
     }
 
+
+# LOVELY FAMILY SYSTEM
+try:
+    from .lovely_family import router as family_router, setup_family, install_authenticated_routes
+except ImportError:
+    from lovely_family import router as family_router, setup_family, install_authenticated_routes
+
+setup_family(database, get_current_account)
+install_authenticated_routes()
+app.include_router(family_router)
+
+# LOVELY CP AND BROTHER/SISTER SYSTEM
+try:
+    from .lovely_relationships import router as relationships_router, setup_relationships
+except ImportError:
+    from lovely_relationships import router as relationships_router, setup_relationships
+
+setup_relationships(database, get_current_account)
+app.include_router(relationships_router)

@@ -1,3 +1,5 @@
+import 'lovely_family.dart';
+import 'lovely_relationships.dart';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
@@ -210,7 +212,28 @@ class _LovelyNewProfileState extends State<LovelyNewProfile> {
                   context,
                   item.$1,
                   item.$2,
-                  onTap: item.$2 == 'Wallet'
+                  onTap: item.$2 == 'Family'
+                    ? () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const LovelyFamilyPage(),
+                          ),
+                        )
+                    : item.$2 == 'CP'
+                        ? () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const LovelyRelationshipsPage(siblings: false),
+                              ),
+                            )
+                        : item.$2 == 'Brother & Sister'
+                            ? () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const LovelyRelationshipsPage(siblings: true),
+                                  ),
+                                )
+                    : item.$2 == 'Wallet'
                       ? () async {
                           try {
                             final token = await lovelyStorage.read(
