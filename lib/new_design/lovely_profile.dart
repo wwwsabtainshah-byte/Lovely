@@ -1,11 +1,17 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+const lovelyApi = 'https://lovely.fastapicloud.dev';
+const lovelyStorage = FlutterSecureStorage();
 
 class LovelyNewProfile extends StatelessWidget {
   const LovelyNewProfile({super.key});
 
   static const purple = Color(0xFF9B6DFF);
 
-  Widget button(BuildContext context, IconData icon, String name) {
+  Widget button(BuildContext context, IconData icon, String name, {VoidCallback? onTap}) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 5),
       decoration: BoxDecoration(
@@ -22,11 +28,11 @@ class LovelyNewProfile extends StatelessWidget {
         leading: Icon(icon, color: Colors.white),
         title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
         trailing: const Icon(Icons.chevron_right_rounded),
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$name page is being connected')),
-          );
-        },
+        onTap: onTap ?? () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('$name page is being connected')),
+            );
+          },
       ),
     );
   }
@@ -109,7 +115,82 @@ class LovelyNewProfile extends StatelessWidget {
             (Icons.mic, 'Host Center'),
             (Icons.support_agent, 'Contact Us'),
           ])
-            button(context, item.$1, item.$2),
+            button(
+                  context,
+                  item.$1,
+                  item.$2,
+                  onTap: item.$2 == 'Wallet'
+                      ? () async {
+                          try {
+                            final token = await lovelyStorage.read(
+                              key: 'lovely_token',
+                            );
+
+                            if (!context.mounted) return;
+
+                            if (token == null || token.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Please login again.'),
+                                ),
+                              );
+                              return;
+                            }
+
+                            final response = await http.get(
+                              Uri.parse('$lovelyApi/wallet/me'),
+                              headers: {
+                                'Authorization': 'Bearer $token',
+                              },
+                            ).timeout(const Duration(seconds: 15));
+
+                            if (!context.mounted) return;
+
+                            if (response.statusCode == 200) {
+                              final data = jsonDecode(response.body);
+                              if (data is! Map) {
+                                throw const FormatException(
+                                  'Invalid wallet response',
+                                );
+                              }
+
+                              showDialog<void>(
+                                context: context,
+                                builder: (dialogContext) => AlertDialog(
+                                  title: const Text('My Wallet'),
+                                  content: Text(
+                                    'Coins: ${data['coins'] ?? 0}\n'
+                                    'Diamonds: ${data['diamonds'] ?? 0}',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(dialogContext),
+                                      child: const Text('Close'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Wallet server error: ${response.statusCode}',
+                                  ),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Wallet error: $e'),
+                              ),
+                            );
+                          }
+                        }
+                      : null,
+                ),
         ],
       ),
     );
