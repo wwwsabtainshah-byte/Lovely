@@ -1,4 +1,5 @@
 import 'new_design/lovely_profile.dart';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:http/http.dart' as http;
@@ -961,27 +962,65 @@ class VoiceRoomsPage extends StatefulWidget {
 }
 
 class _VoiceRoomsPageState extends State<VoiceRoomsPage> {
-  final List<Map<String, dynamic>> _rooms = [
-    {
-      'name': 'Lovely Friends 💗',
-      'host': 'Lovely Host',
-      'seats': 10,
-      'members': 1,
-      'live': true,
-    },
-    {
-      'name': 'Music & Chat 🎵',
-      'host': 'Room Owner',
-      'seats': 10,
-      'members': 0,
-      'live': true,
-    },
-  ];
+  final List<Map<String, dynamic>> _rooms = [];
+  bool _loading = true;
+  String? _error;
 
-  void _createRoom() {
+  @override
+  void initState() {
+    super.initState();
+    _loadRooms();
+  }
+
+  Future<String?> _token() => lovelyStorage.read(key: 'lovely_token');
+
+  Future<void> _loadRooms() async {
+    try {
+      final token = await _token();
+      if (token == null || token.isEmpty) {
+        if (mounted) setState(() {
+          _loading = false;
+          _error = 'Login required';
+        });
+        return;
+      }
+      final response = await http.get(
+        Uri.parse('$lovelyApi/live/rooms'),
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(const Duration(seconds: 15));
+      if (response.statusCode != 200) {
+        throw Exception('Server response ${response.statusCode}');
+      }
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final list = (data['rooms'] as List? ?? []).map((item) {
+        final r = Map<String, dynamic>.from(item as Map);
+        return <String, dynamic>{
+          'room_id': r['room_id'],
+          'name': (r['title'] ?? 'Lovely Room').toString(),
+          'host': (r['host_username'] ?? 'Host').toString(),
+          'seats': 10,
+          'members': 1,
+          'live': true,
+        };
+      }).toList();
+      if (mounted) setState(() {
+        _rooms
+          ..clear()
+          ..addAll(list);
+        _loading = false;
+        _error = null;
+      });
+    } catch (e) {
+      if (mounted) setState(() {
+        _loading = false;
+        _error = 'Rooms load nahi huay. Internet/server check karein.';
+      });
+    }
+  }
+
+  Future<void> _createRoom() async {
     final controller = TextEditingController();
-
-    showDialog(
+    final name = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Create Voice Room'),
@@ -1000,30 +1039,71 @@ class _VoiceRoomsPageState extends State<VoiceRoomsPage> {
           ),
           FilledButton(
             onPressed: () {
-              final name = controller.text.trim();
-              if (name.isEmpty) return;
-
-              setState(() {
-                _rooms.insert(0, {
-                  'name': name,
-                  'host': 'You',
-                  'seats': 10,
-                  'members': 1,
-                  'live': true,
-                });
-              });
-
-              Navigator.pop(dialogContext);
-              _openRoom(_rooms.first);
+              final value = controller.text.trim();
+              if (value.isNotEmpty) Navigator.pop(dialogContext, value);
             },
             child: const Text('Create'),
           ),
         ],
       ),
     );
+    controller.dispose();
+    if (name == null || name.trim().isEmpty || !mounted) return;
+
+    try {
+      final token = await _token();
+      if (token == null || token.isEmpty) throw Exception('Login required');
+      final response = await http.post(
+        Uri.parse('$lovelyApi/live/start'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'title': name.trim(), 'cover_url': ''}),
+      ).timeout(const Duration(seconds: 15));
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw Exception('Room create failed (${response.statusCode})');
+      }
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final room = <String, dynamic>{
+        'room_id': data['room_id'],
+        'name': (data['title'] ?? name.trim()).toString(),
+        'host': 'You',
+        'seats': 10,
+        'members': 1,
+        'live': true,
+      };
+      if (mounted) {
+        setState(() => _rooms.insert(0, room));
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => VoiceRoomDetailPage(
+              roomName: room['name'] as String,
+              hostName: room['host'] as String,
+              seatCount: room['seats'] as int,
+              roomId: room['room_id'] as int,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Room create nahi hua: $e')),
+        );
+      }
+    }
   }
 
   void _openRoom(Map<String, dynamic> room) {
+    final id = room['room_id'];
+    if (id is! int) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Is room ka server ID available nahi hai. Refresh karein.')),
+      );
+      return;
+    }
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -1031,6 +1111,7 @@ class _VoiceRoomsPageState extends State<VoiceRoomsPage> {
           roomName: room['name'] as String,
           hostName: room['host'] as String,
           seatCount: room['seats'] as int,
+          roomId: id,
         ),
       ),
     );
@@ -1043,115 +1124,85 @@ class _VoiceRoomsPageState extends State<VoiceRoomsPage> {
         title: const Text('Voice Rooms 🎙️'),
         actions: [
           IconButton(
+            onPressed: _loadRooms,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh rooms',
+          ),
+          IconButton(
             onPressed: _createRoom,
             icon: const Icon(Icons.add_circle_outline),
             tooltip: 'Create room',
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _createRoom,
-        icon: const Icon(Icons.add),
-        label: const Text('Create Room'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.purple.shade800,
-                  Colors.pink.shade700,
-                ],
-              ),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.graphic_eq, size: 36, color: Colors.white),
-                SizedBox(height: 10),
-                Text(
-                  'Talk. Listen. Make Friends.',
-                  style: TextStyle(
-                    fontSize: 21,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_error!, textAlign: TextAlign.center),
+                      const SizedBox(height: 12),
+                      FilledButton(
+                        onPressed: _loadRooms,
+                        child: const Text('Try again'),
+                      ),
+                    ],
                   ),
-                ),
-                SizedBox(height: 5),
-                Text(
-                  'Join a room or create your own.',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'Popular Rooms',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          for (final room in _rooms)
-            Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
-                contentPadding: const EdgeInsets.all(12),
-                leading: CircleAvatar(
-                  radius: 26,
-                  backgroundColor: Colors.purple.shade100,
-                  child: const Icon(
-                    Icons.record_voice_over,
-                    color: Colors.deepPurple,
-                  ),
-                ),
-                title: Text(
-                  room['name'] as String,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    '${room['host']} • '
-                    '${room['members']} members • '
-                    '${room['seats']} seats',
-                  ),
-                ),
-                trailing: FilledButton(
-                  onPressed: () => _openRoom(room),
-                  child: const Text('Join'),
-                ),
-              ),
-            ),
-          const SizedBox(height: 10),
-          const Text(
-            'نوٹ: ابھی روم کا UI اور مقامی کنٹرول فعال ہیں۔ '
-            'دوسرے فونز سے حقیقی آواز اور مشترکہ رومز کے لیے '
-            'آن لائن signaling server اور WebRTC audio درکار ہیں۔',
-            style: TextStyle(color: Colors.white60, fontSize: 12),
-          ),
-        ],
-      ),
+                )
+              : _rooms.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('Abhi koi live room nahi hai.'),
+                          const SizedBox(height: 12),
+                          FilledButton.icon(
+                            onPressed: _createRoom,
+                            icon: const Icon(Icons.add),
+                            label: const Text('Create Room'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _loadRooms,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: _rooms.length,
+                        itemBuilder: (context, index) {
+                          final room = _rooms[index];
+                          return Card(
+                            child: ListTile(
+                              leading: const CircleAvatar(
+                                child: Icon(Icons.mic, color: Colors.amber),
+                              ),
+                              title: Text(room['name'].toString()),
+                              subtitle: Text('Host: ${room['host']}  •  Room #${room['room_id']}'),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () => _openRoom(room),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
     );
   }
 }
-
-
 
 class VoiceRoomDetailPage extends StatefulWidget {
   final String roomName;
   final String hostName;
   final int seatCount;
+  final int roomId;
 
   const VoiceRoomDetailPage({
     super.key,
     required this.roomName,
     required this.hostName,
     required this.seatCount,
+    required this.roomId,
   });
 
   @override
@@ -1159,6 +1210,280 @@ class VoiceRoomDetailPage extends StatefulWidget {
 }
 
 class _VoiceRoomDetailPageState extends State<VoiceRoomDetailPage> {
+  WebSocketChannel? _voiceChannel;
+  StreamSubscription<dynamic>? _voiceSubscription;
+  String _voiceUsername = '';
+  bool _voiceConnecting = false;
+  final Map<String, RTCPeerConnection> _peerConnections = {};
+  final Map<String, List<RTCIceCandidate>> _pendingVoiceIce = {};
+  final Map<String, MediaStream> _remoteVoiceStreams = {};
+
+  void _sendVoiceSignal(String type, Map<String, dynamic> payload) {
+    final channel = _voiceChannel;
+    if (channel == null) return;
+    final target = payload['target'];
+    if (target is! String || target.isEmpty) return;
+    final body = Map<String, dynamic>.from(payload)..remove('target');
+    try {
+      channel.sink.add(jsonEncode({
+        'type': type,
+        'target': target,
+        'payload': body,
+      }));
+    } catch (_) {}
+  }
+
+  Future<void> _connectVoice() async {
+    if (_voiceConnecting || _voiceChannel != null) return;
+    _voiceConnecting = true;
+    try {
+      final token = await lovelyStorage.read(key: 'lovely_token') ?? '';
+      _voiceUsername = await lovelyStorage.read(key: 'lovely_username') ?? '';
+      if (token.isEmpty || _voiceUsername.isEmpty) {
+        debugPrint('Voice signaling: login token/username missing');
+        return;
+      }
+
+      final base = Uri.parse(lovelyApi);
+      final wsScheme = base.scheme == 'https' ? 'wss' : 'ws';
+      final uri = Uri(
+        scheme: wsScheme,
+        host: base.host,
+        port: base.hasPort ? base.port : null,
+        path: '/ws/voice/${Uri.encodeComponent(widget.roomId)}',
+        queryParameters: {'token': token, 'username': _voiceUsername},
+      );
+
+      final channel = WebSocketChannel.connect(uri);
+      _voiceChannel = channel;
+      _voiceSubscription = channel.stream.listen(
+        (event) {
+          try {
+            final data = jsonDecode(event.toString()) as Map<String, dynamic>;
+            final type = data['type']?.toString() ?? '';
+            final peer = data['from']?.toString() ?? data['username']?.toString() ?? data['target']?.toString() ?? '';
+            final payload = data['payload'] is Map
+                ? Map<String, dynamic>.from(data['payload'] as Map)
+                : <String, dynamic>{};
+
+            if (type == 'room_joined') {
+              final peers = data['participants'];
+              if (peers is List) {
+                for (final item in peers) {
+                  final name = item.toString();
+                  if (name.isNotEmpty && name != _voiceUsername) {
+                    if (_voiceUsername.compareTo(name) < 0) _makeVoiceOffer(name);
+                  }
+                }
+              }
+            } else if (type == 'peer_joined') {
+              if (peer.isNotEmpty && peer != _voiceUsername) {
+                if (_voiceUsername.compareTo(peer) < 0) _makeVoiceOffer(peer);
+              }
+            } else if (type == 'offer') {
+              _handleVoiceOffer(peer, payload);
+            } else if (type == 'answer') {
+              _handleVoiceAnswer(peer, payload);
+            } else if (type == 'ice_candidate') {
+              _handleVoiceIce(peer, payload);
+            } else if (type == 'peer_left' || type == 'peer_unavailable') {
+              _closeVoicePeer(peer);
+            }
+          } catch (e) {
+            debugPrint('Voice signal parse error: $e');
+          }
+        },
+        onError: (Object e) => debugPrint('Voice socket error: $e'),
+        onDone: () {
+          _voiceChannel = null;
+          debugPrint('Voice signaling disconnected');
+        },
+      );
+    } catch (e) {
+      debugPrint('Voice signaling connect failed: $e');
+    } finally {
+      _voiceConnecting = false;
+    }
+  }
+
+  Future<RTCPeerConnection> _getVoicePeer(String username) async {
+    final existing = _peerConnections[username];
+    if (existing != null) return existing;
+
+    final pc = await createPeerConnection({
+      'iceServers': [
+        {'urls': 'stun:stun.l.google.com:19302'},
+        {'urls': 'stun:stun1.l.google.com:19302'},
+      ],
+    });
+    _peerConnections[username] = pc;
+
+    pc.onIceCandidate = (candidate) {
+      if (candidate.candidate == null) return;
+      _sendVoiceSignal('ice_candidate', {
+        'target': username,
+        'candidate': candidate.candidate,
+        'sdpMid': candidate.sdpMid,
+        'sdpMLineIndex': candidate.sdpMLineIndex,
+      });
+    };
+
+    pc.onTrack = (event) {
+      if (event.streams.isNotEmpty) {
+        _remoteVoiceStreams[username] = event.streams.first;
+        if (mounted) setState(() {});
+      }
+    };
+
+    final local = _localStream;
+    if (local != null) {
+      for (final track in local.getAudioTracks()) {
+        await pc.addTrack(track, local);
+      }
+    }
+    return pc;
+  }
+
+  Future<void> _makeVoiceOffer(String username) async {
+    if (username.isEmpty || username == _voiceUsername) return;
+    try {
+      final pc = await _getVoicePeer(username);
+      final local = _localStream;
+      if (local != null) {
+        final senders = await pc.getSenders();
+        for (final track in local.getAudioTracks()) {
+          if (!senders.any((sender) => sender.track?.id == track.id)) {
+            await pc.addTrack(track, local);
+          }
+        }
+      }
+      final offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      _sendVoiceSignal('offer', {
+        'target': username,
+        'sdp': offer.sdp,
+        'type': offer.type,
+      });
+    } catch (e) {
+      debugPrint('Voice offer failed for $username: $e');
+    }
+  }
+
+  Future<void> _handleVoiceOffer(
+      String username, Map<String, dynamic> payload) async {
+    if (username.isEmpty) return;
+    try {
+      final pc = await _getVoicePeer(username);
+      await pc.setRemoteDescription(RTCSessionDescription(
+        payload['sdp']?.toString(),
+        payload['type']?.toString() ?? 'offer',
+      ));
+      await _drainVoiceIce(username, pc);
+      final answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      _sendVoiceSignal('answer', {
+        'target': username,
+        'sdp': answer.sdp,
+        'type': answer.type,
+      });
+    } catch (e) {
+      debugPrint('Voice offer handling failed: $e');
+    }
+  }
+
+  Future<void> _handleVoiceAnswer(
+      String username, Map<String, dynamic> payload) async {
+    try {
+      final pc = _peerConnections[username];
+      if (pc == null) return;
+      await pc.setRemoteDescription(RTCSessionDescription(
+        payload['sdp']?.toString(),
+        payload['type']?.toString() ?? 'answer',
+      ));
+      await _drainVoiceIce(username, pc);
+    } catch (e) {
+      debugPrint('Voice answer handling failed: $e');
+    }
+  }
+
+  Future<void> _handleVoiceIce(
+      String username, Map<String, dynamic> payload) async {
+    if (username.isEmpty) return;
+    final candidate = RTCIceCandidate(
+      payload['candidate']?.toString(),
+      payload['sdpMid']?.toString(),
+      payload['sdpMLineIndex'] is int
+          ? payload['sdpMLineIndex'] as int
+          : int.tryParse(payload['sdpMLineIndex']?.toString() ?? ''),
+    );
+    final pc = _peerConnections[username];
+    if (pc == null) {
+      _pendingVoiceIce.putIfAbsent(username, () => []).add(candidate);
+      return;
+    }
+    final remote = await pc.getRemoteDescription();
+    if (remote == null) {
+      _pendingVoiceIce.putIfAbsent(username, () => []).add(candidate);
+    } else {
+      await pc.addCandidate(candidate);
+    }
+  }
+
+  Future<void> _drainVoiceIce(
+      String username, RTCPeerConnection pc) async {
+    final pending = _pendingVoiceIce.remove(username) ?? [];
+    for (final candidate in pending) {
+      try {
+        await pc.addCandidate(candidate);
+      } catch (e) {
+        debugPrint('Queued ICE candidate failed: $e');
+      }
+    }
+  }
+
+  Future<void> _attachLocalVoiceToPeers() async {
+    final local = _localStream;
+    if (local == null) return;
+    for (final entry in _peerConnections.entries) {
+      try {
+        final senders = await entry.value.getSenders();
+        for (final track in local.getAudioTracks()) {
+          if (!senders.any((sender) => sender.track?.id == track.id)) {
+            await entry.value.addTrack(track, local);
+          }
+        }
+      } catch (e) {
+        debugPrint('Adding local audio failed: $e');
+      }
+    }
+  }
+
+  Future<void> _closeVoicePeer(String username) async {
+    final pc = _peerConnections.remove(username);
+    try {
+      await pc?.close();
+    } catch (_) {}
+    final stream = _remoteVoiceStreams.remove(username);
+    try {
+      await stream?.dispose();
+    } catch (_) {}
+    _pendingVoiceIce.remove(username);
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _closeVoice() async {
+    await _voiceSubscription?.cancel();
+    _voiceSubscription = null;
+    try {
+      await _voiceChannel?.sink.close();
+    } catch (_) {}
+    _voiceChannel = null;
+    final names = _peerConnections.keys.toList();
+    for (final name in names) {
+      await _closeVoicePeer(name);
+    }
+  }
+
   static const gold = Color(0xFFFFC451);
   static const dark = Color(0xFF160900);
   static const panel = Color(0xFF2B1708);
@@ -1170,6 +1495,66 @@ class _VoiceRoomDetailPageState extends State<VoiceRoomDetailPage> {
   bool _minimized = false;
   final _message = TextEditingController();
   final List<String> _messages = ['Welcome to Lovely Party Room! 🎉'];
+  Timer? _chatTimer;
+  bool _chatSending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _connectVoice();
+    _refreshRoomMessages();
+    _chatTimer = Timer.periodic(
+      const Duration(seconds: 3),
+      (_) => _refreshRoomMessages(),
+    );
+  }
+
+  Future<String?> _roomToken() =>
+      lovelyStorage.read(key: 'lovely_token');
+
+  Future<void> _refreshRoomMessages() async {
+    try {
+      final token = await _roomToken();
+      if (token == null || token.isEmpty) return;
+
+      final response = await http.get(
+        Uri.parse('$lovelyApi/live/chat/messages/${widget.roomId}'),
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(const Duration(seconds: 12));
+
+      if (response.statusCode != 200) return;
+      final data = jsonDecode(response.body);
+      if (data is! Map<String, dynamic>) return;
+      final raw = data['messages'];
+      if (raw is! List) return;
+
+      final messages = raw.map((item) {
+        if (item is! Map) return null;
+        final username = (item['username'] ?? 'User').toString();
+        final message = (item['message'] ?? '').toString();
+        if (message.isEmpty) return null;
+        return '$username: $message';
+      }).whereType<String>().toList();
+
+      if (!mounted) return;
+      final visible = <String>[
+        'Welcome to Lovely Party Room! 🎉',
+        ...messages,
+      ];
+      if (_messages.length != visible.length ||
+          !_messages.asMap().entries.every(
+            (entry) => entry.value == visible[entry.key],
+          )) {
+        setState(() {
+          _messages
+            ..clear()
+            ..addAll(visible);
+        });
+      }
+    } catch (_) {
+      // Keep the room open if the chat server is temporarily unavailable.
+    }
+  }
 
   Future<void> _toggleMic() async {
     if (_starting) return;
@@ -1191,6 +1576,8 @@ class _VoiceRoomDetailPageState extends State<VoiceRoomDetailPage> {
       for (final t in _localStream!.getAudioTracks()) {
         t.enabled = true;
       }
+      await _connectVoice();
+      await _attachLocalVoiceToPeers();
       if (mounted) setState(() => _muted = false);
     } catch (_) {
       if (mounted) {
@@ -1204,18 +1591,61 @@ class _VoiceRoomDetailPageState extends State<VoiceRoomDetailPage> {
   }
 
   Future<void> _leaveRoom() async {
-    await _localStream?.dispose();
-    _localStream = null;
+    _chatTimer?.cancel();
+    _chatTimer = null;
+    await _closeVoice();
     if (mounted) Navigator.pop(context);
   }
 
-  void _sendMessage() {
+  @override
+  void dispose() {
+    _chatTimer?.cancel();
+    unawaited(_closeVoice());
+    _message.dispose();
+    _localStream?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendMessage() async {
     final text = _message.text.trim();
-    if (text.isEmpty) return;
-    setState(() {
-      _messages.add('You: $text');
+    if (text.isEmpty || _chatSending) return;
+
+    setState(() => _chatSending = true);
+    try {
+      final token = await _roomToken();
+      if (token == null || token.isEmpty) {
+        throw Exception('Login required');
+      }
+
+      final response = await http.post(
+        Uri.parse('$lovelyApi/live/chat/send'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'room_id': widget.roomId,
+          'message': text,
+        }),
+      ).timeout(const Duration(seconds: 12));
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw Exception('Server response ${response.statusCode}');
+      }
+
       _message.clear();
-    });
+      await _refreshRoomMessages();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Message send nahi hua. Internet/login check karein.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _chatSending = false);
+    }
   }
 
   void _panel(String title, IconData icon, List<String> options) {
@@ -1425,7 +1855,7 @@ class _VoiceRoomDetailPageState extends State<VoiceRoomDetailPage> {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: Colors.white,
                       fontWeight: FontWeight.bold, fontSize: 15)),
-                  const Text('Room ID: 728394',
+                  Text('Room ID: ${widget.roomId}',
                     style: TextStyle(color: Colors.white70, fontSize: 10)),
                 ],
               )),
@@ -1586,7 +2016,7 @@ class _VoiceRoomDetailPageState extends State<VoiceRoomDetailPage> {
           ),
           Padding(
             padding: const EdgeInsets.only(bottom: 3),
-            child: Text(_muted ? 'Mic off' : 'Mic on — local microphone only',
+            child: Text(_muted ? 'Mic off' : 'Mic on — voice enabled',
               maxLines: 1, overflow: TextOverflow.ellipsis,
               style: const TextStyle(color: Colors.white54, fontSize: 9)),
           ),
