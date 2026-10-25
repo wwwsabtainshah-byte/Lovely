@@ -738,17 +738,55 @@ def google_login(data: dict):
 # ==========================================
 
 @app.get("/me")
-def my_account(
-    account=Depends(get_current_account),
-):
-    return {
-        "username": account["username"],
-        "approved": bool(account["approved"]),
-        "banned": bool(account["banned"]),
-        "role": account.get("role", "user"),
-        "user_code": account.get("user_code"),
-        "message": "Authenticated",
-    }
+def my_account(account=Depends(get_current_account)):
+    with database() as db:
+        current = db.execute(
+            "SELECT id, username, approved, banned, role, user_code "
+            "FROM accounts WHERE id = ?",
+            (account["id"],),
+        ).fetchone()
+
+        if not current:
+            raise HTTPException(status_code=404, detail="Account not found")
+
+        user_code = current["user_code"]
+        if not user_code:
+            rows = db.execute(
+                "SELECT user_code FROM accounts "
+                "WHERE user_code IS NOT NULL AND TRIM(user_code) != ''"
+            ).fetchall()
+            numeric_codes = [
+                int(row["user_code"])
+                for row in rows
+                if str(row["user_code"]).isdigit()
+            ]
+            candidate = max([100000, *numeric_codes]) + 1
+
+            while db.execute(
+                "SELECT 1 FROM accounts WHERE user_code = ?",
+                (str(candidate),),
+            ).fetchone():
+                candidate += 1
+
+            db.execute(
+                "UPDATE accounts SET user_code = ? "
+                "WHERE id = ? AND (user_code IS NULL OR TRIM(user_code) = '')",
+                (str(candidate), current["id"]),
+            )
+            current = db.execute(
+                "SELECT id, username, approved, banned, role, user_code "
+                "FROM accounts WHERE id = ?",
+                (current["id"],),
+            ).fetchone()
+
+        return {
+            "username": current["username"],
+            "approved": bool(current["approved"]),
+            "banned": bool(current["banned"]),
+            "role": current["role"] or "user",
+            "user_code": current["user_code"],
+            "message": "Authenticated",
+        }
 
 
 # ==========================================

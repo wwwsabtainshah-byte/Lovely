@@ -6,6 +6,33 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 const lovelyApi = 'https://lovely.fastapicloud.dev';
 const lovelyStorage = FlutterSecureStorage();
 
+Future<String> fetchLovelyOriginalId() async {
+  final token = await lovelyStorage.read(key: 'lovely_token');
+  if (token == null || token.isEmpty) return 'Original ID: Login required';
+
+  try {
+    final response = await http.get(
+      Uri.parse('$lovelyApi/me'),
+      headers: {'Authorization': 'Bearer $token'},
+    ).timeout(const Duration(seconds: 12));
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data is Map) {
+        final code = data['user_code']?.toString();
+        if (code != null && code.isNotEmpty) {
+          return 'Original ID: $code';
+        }
+      }
+      return 'Original ID: Pending';
+    }
+    return 'Original ID: Unavailable';
+  } catch (_) {
+    return 'Original ID: Tap to retry later';
+  }
+}
+
+
 class LovelyNewProfile extends StatelessWidget {
   const LovelyNewProfile({super.key});
 
@@ -73,7 +100,13 @@ class LovelyNewProfile extends StatelessWidget {
                 const CircleAvatar(radius: 43, child: Icon(Icons.person, size: 48)),
                 const SizedBox(height: 10),
                 const Text('Lovely User', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                const Text('Original ID', style: TextStyle(color: Colors.white70)),
+                FutureBuilder<String>(
+  future: fetchLovelyOriginalId(),
+  builder: (context, snapshot) => Text(
+    snapshot.data ?? 'Original ID: Loading...',
+    style: const TextStyle(color: Colors.white70),
+  ),
+),
                 Align(
                   alignment: Alignment.centerRight,
                   child: IconButton(
