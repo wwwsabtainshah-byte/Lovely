@@ -786,7 +786,7 @@ def my_account(account=Depends(get_current_account)):
             "approved": bool(current["approved"]),
             "banned": bool(current["banned"]),
             "role": current["role"] or "user",
-            "user_code": current["user_code"],
+            "user_code": get_effective_user_code(db, current),
         "display_name": current["display_name"] or "",
         "profile_photo": current["profile_photo"] or "",
             "message": "Authenticated",
@@ -1627,6 +1627,201 @@ def init_profile_schema():
                 )
 
 init_profile_schema()
+
+# LOVELY_UNIQUE_ID_V1
+def init_unique_user_ids():
+    with database() as db:
+        duplicates = db.execute("""
+            SELECT user_code, COUNT(*) AS total
+            FROM accounts
+            WHERE user_code IS NOT NULL AND TRIM(user_code) != ''
+            GROUP BY user_code
+            HAVING COUNT(*) > 1
+        """).fetchall()
+
+        if duplicates:
+            raise RuntimeError(
+                "Duplicate user IDs found. Manual review required."
+            )
+
+        db.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS
+            idx_lovely_unique_user_code
+            ON accounts(user_code)
+            WHERE user_code IS NOT NULL AND TRIM(user_code) != ''
+        """)
+
+init_unique_user_ids()
+
+
+
+# LOVELY_TEMP_ID_V1
+def init_temporary_id_schema():
+    with database() as db:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS temporary_user_ids (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id INTEGER NOT NULL UNIQUE,
+                temporary_code TEXT NOT NULL UNIQUE,
+                original_code TEXT NOT NULL,
+                assigned_by TEXT NOT NULL,
+                assigned_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                FOREIGN KEY(account_id) REFERENCES accounts(id)
+            )
+        """)
+
+
+def get_effective_user_code(db, account):
+    from datetime import datetime, timezone
+
+    original = str(account["user_code"] or "")
+
+    if original == "1":
+        return "1"
+
+    temporary = db.execute(
+        "SELECT temporary_code, expires_at "
+        "FROM temporary_user_ids WHERE account_id = ?",
+        (account["id"],),
+    ).fetchone()
+
+    if not temporary:
+        return original
+
+    expiry = datetime.fromisoformat(temporary["expires_at"])
+    if expiry.tzinfo is None:
+        expiry = expiry.replace(tzinfo=timezone.utc)
+
+    if datetime.now(timezone.utc) >= expiry:
+        db.execute(
+            "DELETE FROM temporary_user_ids WHERE account_id = ?",
+            (account["id"],),
+        )
+        return original
+
+    return temporary["temporary_code"]
+
+
+init_temporary_id_schema()
+
+
+
+# LOVELY_TEMP_ID_ASSIGN_V1
+@app.post("/owner/temporary-id/{username}")
+def assign_temporary_id(
+    username: str,
+    data: dict,
+    account=Depends(get_current_account),
+):
+    from datetime import datetime, timezone, timedelta
+
+    if account.get("role") != "owner":
+        raise HTTPException(status_code=403, detail="Owner permission required")
+
+    new_code = str(data.get("user_code", "")).strip()
+
+    if not new_code.isdigit() or not 1 <= len(new_code) <= 12:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+
+    if new_code == "1":
+        raise HTTPException(
+            status_code=409,
+            detail="This ID is already in use. Nothing changed.",
+        )
+
+    with database() as db:
+        target = db.execute(
+            "SELECT id, user_code FROM accounts WHERE username = ?",
+            (username,),
+        ).fetchone()
+
+        if not target:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        if str(target["user_code"] or "") == "1":
+            raise HTTPException(status_code=403, detail="Owner ID cannot be changed")
+
+        if db.execute(
+            "SELECT 1 FROM accounts WHERE user_code = ?",
+            (new_code,),
+        ).fetchone():
+            raise HTTPException(
+                status_code=409,
+                detail="This ID is already in use. Nothing changed.",
+            )
+
+        now_utc = datetime.now(timezone.utc)
+        db.execute(
+            "DELETE FROM temporary_user_ids WHERE expires_at <= ?",
+            (now_utc.isoformat(),),
+        )
+
+        if db.execute(
+            "SELECT 1 FROM temporary_user_ids WHERE temporary_code = ?",
+            (new_code,),
+        ).fetchone():
+            raise HTTPException(
+                status_code=409,
+                detail="This ID is already in use. Nothing changed.",
+            )
+
+        db.execute(
+            "DELETE FROM temporary_user_ids WHERE account_id = ?",
+            (target["id"],),
+        )
+
+        db.execute(
+            "INSERT INTO temporary_user_ids "
+            "(account_id, temporary_code, original_code, assigned_by, "
+            "assigned_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                target["id"],
+                new_code,
+                target["user_code"],
+                account["username"],
+                now_utc.isoformat(),
+                (now_utc + timedelta(days=30)).isoformat(),
+            ),
+        )
+
+    return {
+        "success": True,
+        "message": "Temporary ID assigned for 30 days",
+        "user_code": new_code,
+    }
+
+
+# LOVELY_OWNER_IDENTITY_V1
+def init_owner_identity():
+    owner_email = os.getenv("LOVELY_OWNER_GOOGLE_EMAIL", "").strip().lower()
+    if not owner_email:
+        return
+
+    with database() as db:
+        owner = db.execute(
+            "SELECT id, username FROM accounts WHERE LOWER(google_email) = ?",
+            (owner_email,),
+        ).fetchone()
+
+        if not owner:
+            return
+
+        conflict = db.execute(
+            "SELECT id FROM accounts WHERE user_code = '1' AND id != ?",
+            (owner["id"],),
+        ).fetchone()
+
+        if conflict:
+            raise RuntimeError("Owner ID 1 is already assigned. Manual review required.")
+
+        db.execute(
+            "UPDATE accounts SET role = 'owner', user_code = '1' WHERE id = ?",
+            (owner["id"],),
+        )
+
+
+init_owner_identity()
 
 
 
