@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -444,6 +445,9 @@ class _VideoRoomsPageState extends State<VideoRoomsPage> {
   int _tab = 1;
   final Set<int> _liked = {};
   final Set<int> _followed = {};
+  final Set<int> _saved = {};
+  final Map<int, List<String>> _comments = {};
+  final PageController _pageController = PageController();
 
   final List<Map<String, String>> _clips = const [
     {
@@ -510,6 +514,159 @@ class _VideoRoomsPageState extends State<VideoRoomsPage> {
         ),
       ),
     );
+  }
+
+
+  Future<void> _openComments(int index) async {
+    final input = TextEditingController();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheet) => StatefulBuilder(
+        builder: (sheet, refresh) {
+          final list = _comments.putIfAbsent(index, () => <String>[]);
+
+          void send() {
+            final value = input.text.trim();
+            if (value.isEmpty) return;
+
+            setState(() => list.add(value));
+            input.clear();
+            refresh(() {});
+          }
+
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 18,
+              bottom: MediaQuery.of(sheet).viewInsets.bottom + 16,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Comments',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                if (list.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Text('Abhi koi comment nahi.'),
+                  )
+                else
+                  SizedBox(
+                    height: 220,
+                    child: ListView(
+                      children: list.map((value) => ListTile(
+                        leading: const Icon(Icons.person),
+                        title: Text(value),
+                      )).toList(),
+                    ),
+                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: input,
+                        onSubmitted: (_) => send(),
+                        decoration: const InputDecoration(
+                          hintText: 'Comment likhein...',
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: send,
+                      icon: const Icon(Icons.send),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    input.dispose();
+  }
+
+  Future<void> _openSearch() async {
+    final input = TextEditingController();
+    String query = '';
+    await showDialog<void>(
+      context: context,
+      builder: (dialog) => StatefulBuilder(
+        builder: (dialog, refresh) {
+          final results = _clips.asMap().entries.where((e) =>
+            '${e.value['name']} ${e.value['caption']}'.toLowerCase().contains(query.toLowerCase())).toList();
+          return AlertDialog(
+            title: const Text('Search Lovely'),
+            content: SizedBox(width: double.maxFinite, child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: input, autofocus: true,
+                  onChanged: (v) => refresh(() => query = v),
+                  decoration: const InputDecoration(hintText: 'Creator ya video search')),
+                Flexible(child: ListView(shrinkWrap: true, children: results.map((e) =>
+                  ListTile(title: Text(e.value['name'] ?? ''),
+                    subtitle: Text(e.value['caption'] ?? ''),
+                    onTap: () {
+                      Navigator.pop(dialog);
+                      if (_pageController.hasClients) _pageController.jumpToPage(e.key);
+                    })).toList())),
+              ],
+            )),
+          );
+        },
+      ),
+    );
+    input.dispose();
+  }
+
+  Future<void> _openGifts() async {
+    final token = await lovelyStorage.read(key: 'lovely_token');
+    if (!mounted) return;
+    if (token == null || token.isEmpty) {
+      _message('Login required', 'Gift store dekhne ke liye login karein.');
+      return;
+    }
+    try {
+      final response = await http.get(
+        Uri.parse('$lovelyApi/store/items'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (!mounted) return;
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        _message('Gift store', 'Store load nahi hua: ${response.statusCode}');
+        return;
+      }
+      final data = jsonDecode(response.body);
+      final items = data is List ? data :
+        (data is Map ? (data['items'] as List? ?? []) : []);
+      if (items.isEmpty) {
+        _message('Gift store', 'Filhal koi gift item nahi mila.');
+        return;
+      }
+      showModalBottomSheet<void>(
+        context: context,
+        builder: (sheet) => ListView(shrinkWrap: true, children: [
+          const ListTile(title: Text('Lovely Gift Store')),
+          ...items.map<Widget>((raw) {
+            final item = raw is Map ? raw : {};
+            return ListTile(
+              leading: const Icon(Icons.card_giftcard, color: Colors.pink),
+              title: Text('${item['name'] ?? item['title'] ?? 'Gift'}'),
+              subtitle: Text('${item['price'] ?? item['coins'] ?? ''} coins'),
+            );
+          }),
+        ]),
+      );
+    } catch (_) {
+      if (mounted) _message('Gift store', 'Store load nahi ho saka. Internet check karein.');
+    }
   }
 
   Widget _clip(int index) {
@@ -599,10 +756,7 @@ class _VideoRoomsPageState extends State<VideoRoomsPage> {
                   _topTab('For You', 1),
                   const SizedBox(width: 16),
                   IconButton(
-                    onPressed: () => _message(
-                      'Search',
-                      'Video search ko server feed se connect karna baqi hai.',
-                    ),
+                    onPressed: _openSearch,
                     icon: const Icon(Icons.search, color: Colors.white, size: 28),
                   ),
                 ],
@@ -648,29 +802,33 @@ class _VideoRoomsPageState extends State<VideoRoomsPage> {
               _action(
                 icon: Icons.mode_comment_outlined,
                 label: 'Comment',
-                onTap: () => _message(
-                  'Comments',
-                  'Comments ko backend API se connect karna baqi hai.',
-                ),
+                onTap: () => _openComments(index),
               ),
               _action(
-                icon: Icons.bookmark_border,
-                label: 'Save',
-                onTap: () => _message('Save video', 'Save feature abhi demo hai.'),
+                icon: _saved.contains(index) ? Icons.bookmark : Icons.bookmark_border,
+                label: _saved.contains(index) ? 'Saved' : 'Save',
+                onTap: () => setState(() {
+                  if (_saved.contains(index)) { _saved.remove(index); }
+                  else { _saved.add(index); }
+                }),
               ),
               _action(
                 icon: Icons.card_giftcard,
                 label: 'Gift',
                 color: const Color(0xFFFF80C8),
-                onTap: () => _message(
-                  'Send Gift',
-                  'Real gifts aur coins ke liye existing wallet API connect karni hogi.',
-                ),
+                onTap: _openGifts,
               ),
               _action(
                 icon: Icons.share_outlined,
                 label: 'Share',
-                onTap: () => _message('Share', 'Video sharing integration baqi hai.'),
+                onTap: () async {
+                  await Clipboard.setData(ClipboardData(
+                    text: 'Check out @${item['name']} on Lovely Chat! ${item['caption']}',
+                  ));
+                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Share text copied!')),
+                  );
+                },
               ),
             ],
           ),
@@ -778,14 +936,20 @@ class _VideoRoomsPageState extends State<VideoRoomsPage> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: PageView.builder(
+        controller: _pageController,
         scrollDirection: Axis.vertical,
         itemCount: 30,
         itemBuilder: (context, index) => _clip(index),
       ),
     );
   }
-}
 
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+}
 
 // ---------------- VOICE ROOMS ----------------
 
