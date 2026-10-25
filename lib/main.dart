@@ -2540,6 +2540,68 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic>? account;
+  bool photoSaving = false;
+
+  Future<void> changeProfilePhoto() async {
+    if (photoSaving) return;
+    try {
+      final file = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 65,
+        maxWidth: 700,
+      );
+      if (file == null) return;
+
+      final bytes = await file.readAsBytes();
+      final mime = file.name.toLowerCase().endsWith('.png')
+          ? 'image/png'
+          : 'image/jpeg';
+      final photo = 'data:$mime;base64,${base64Encode(bytes)}';
+
+      final token = await lovelyStorage.read(key: 'lovely_token');
+      if (token == null) throw Exception('Dobara login karein.');
+
+      if (!mounted) return;
+      setState(() => photoSaving = true);
+
+      final response = await http.put(
+        Uri.parse('$lovelyApi/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'display_name': (account?['display_name'] ?? '').toString().trim().isNotEmpty
+              ? account!['display_name']
+              : (account?['username'] ?? 'Lovely User').toString(),
+          'profile_photo': photo,
+        }),
+      ).timeout(const Duration(seconds: 30));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode != 200 || data['success'] != true) {
+        throw Exception(data['detail']?.toString() ?? 'Photo save nahi hui.');
+      }
+
+      if (!mounted) return;
+      setState(() {
+        account ??= {};
+        account!['profile_photo'] = photo;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile photo saved successfully')),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Photo update failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => photoSaving = false);
+    }
+  }
+
   bool accountLoading = true;
 
   @override
@@ -2632,13 +2694,29 @@ class _ProfilePageState extends State<ProfilePage> {
                       width: 2,
                     ),
                   ),
-                  child: const CircleAvatar(
-                    radius: 43,
-                    backgroundColor: Color(0xFF281747),
-                    child: Icon(
-                      Icons.person_rounded,
-                      size: 48,
-                      color: Colors.white,
+                  child: InkWell(
+                    onTap: photoSaving ? null : changeProfilePhoto,
+                    customBorder: const CircleBorder(),
+                    child: CircleAvatar(
+                      radius: 43,
+                      backgroundColor: const Color(0xFF281747),
+                      backgroundImage: (account?['profile_photo'] ?? '')
+                              .toString()
+                              .startsWith('data:image/')
+                          ? MemoryImage(base64Decode(
+                              account!['profile_photo'].toString().split(',').last))
+                          : null,
+                      child: photoSaving
+                          ? const CircularProgressIndicator()
+                          : (account?['profile_photo'] ?? '')
+                                  .toString()
+                                  .startsWith('data:image/')
+                              ? null
+                              : const Icon(
+                                  Icons.add_a_photo_outlined,
+                                  size: 42,
+                                  color: Colors.white,
+                                ),
                     ),
                   ),
                 ),
