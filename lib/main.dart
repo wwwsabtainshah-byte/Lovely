@@ -112,7 +112,7 @@ class _LovelyAuthGateState extends State<LovelyAuthGate> {
     }
 
     return loggedIn
-        ? const MainScreen()
+        ? const PostLoginRouter()
         : const LovelyLoginPage();
   }
 }
@@ -193,7 +193,7 @@ class _LovelyLoginPageState extends State<LovelyLoginPage> {
 
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (_) => const MainScreen(),
+            builder: (_) => const PostLoginRouter(),
           ),
         );
       } else {
@@ -264,7 +264,7 @@ class _LovelyLoginPageState extends State<LovelyLoginPage> {
 
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const MainScreen()),
+          MaterialPageRoute(builder: (_) => const PostLoginRouter()),
         );
       } else {
         setState(() {
@@ -381,7 +381,7 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int index = 1;
+  int index = 0;
 
   final List<Widget> pages = const [
     VideoRoomsPage(),
@@ -428,6 +428,250 @@ class _MainScreenState extends State<MainScreen> {
             label: 'Me',
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+// ---------------- FIRST-LOGIN PROFILE COMPLETION ----------------
+
+class PostLoginRouter extends StatefulWidget {
+  const PostLoginRouter({super.key});
+
+  @override
+  State<PostLoginRouter> createState() => _PostLoginRouterState();
+}
+
+class _PostLoginRouterState extends State<PostLoginRouter> {
+  bool loading = true;
+  bool completed = false;
+  String name = '';
+  String photo = '';
+
+  @override
+  void initState() {
+    super.initState();
+    checkProfile();
+  }
+
+  Future<void> checkProfile() async {
+    try {
+      final token = await lovelyStorage.read(key: 'lovely_token');
+      if (token == null) {
+        completed = false;
+      } else {
+        final response = await http.get(
+          Uri.parse('$lovelyApi/me'),
+          headers: {'Authorization': 'Bearer $token'},
+        ).timeout(const Duration(seconds: 12));
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          name = (data['display_name'] ?? '').toString();
+          photo = (data['profile_photo'] ?? '').toString();
+          // Preserve profiles completed before this flag was introduced.
+          completed = data['profile_completed'] == true ||
+              name.trim().isNotEmpty;
+        }
+      }
+    } catch (_) {
+      // If the server cannot verify the profile, do not assume setup is done.
+      completed = false;
+    }
+
+    if (mounted) setState(() => loading = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const Scaffold(
+        backgroundColor: bg,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return completed
+        ? const MainScreen()
+        : const ProfileCompletionPage();
+  }
+}
+
+class ProfileCompletionPage extends StatefulWidget {
+  const ProfileCompletionPage({super.key});
+
+  @override
+  State<ProfileCompletionPage> createState() =>
+      _ProfileCompletionPageState();
+}
+
+class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
+  final nameController = TextEditingController();
+  XFile? selectedPhoto;
+  String? photoData;
+  bool saving = false;
+  String error = '';
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> choosePhoto() async {
+    try {
+      final file = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 75,
+        maxWidth: 900,
+      );
+      if (file == null) return;
+
+      final bytes = await file.readAsBytes();
+      final extension = file.name.toLowerCase().split('.').last;
+      final mime = extension == 'png' ? 'image/png' : 'image/jpeg';
+
+      setState(() {
+        selectedPhoto = file;
+        photoData = 'data:$mime;base64,${base64Encode(bytes)}';
+        error = '';
+      });
+    } catch (_) {
+      setState(() => error = 'Photo select nahi ho saki. Dobara try karein.');
+    }
+  }
+
+  Future<void> saveProfile() async {
+    if (saving) return;
+
+    final displayName = nameController.text.trim();
+    if (displayName.isEmpty || displayName.length > 40) {
+      setState(() => error = 'Naam 1 se 40 characters ka hona chahiye.');
+      return;
+    }
+
+    setState(() {
+      saving = true;
+      error = '';
+    });
+
+    try {
+      final token = await lovelyStorage.read(key: 'lovely_token');
+      if (token == null) throw Exception('Dobara login karein.');
+
+      final response = await http.put(
+        Uri.parse('$lovelyApi/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'display_name': displayName,
+          'profile_photo': photoData ?? '',
+        }),
+      ).timeout(const Duration(seconds: 20));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode != 200 || data['success'] != true) {
+        throw Exception(data['detail']?.toString() ?? 'Profile save nahi hui.');
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const MainScreen()),
+      );
+    } catch (e) {
+      if (mounted) setState(() => error = e.toString());
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: bg,
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        backgroundColor: bg,
+        title: const Text('Complete Your Profile'),
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
+            const SizedBox(height: 24),
+            const Text(
+              'Welcome to Lovely Chat!',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Apna naam aur profile photo set karein.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 32),
+            Center(
+              child: InkWell(
+                onTap: saving ? null : choosePhoto,
+                borderRadius: BorderRadius.circular(60),
+                child: CircleAvatar(
+                  radius: 58,
+                  backgroundColor: panel,
+                  backgroundImage: photoData != null
+                      ? MemoryImage(base64Decode(photoData!.split(',').last))
+                      : null,
+                  child: photoData == null
+                      ? const Icon(Icons.add_a_photo_outlined,
+                          size: 36, color: Colors.white)
+                      : null,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: saving ? null : choosePhoto,
+              child: const Text('Choose Profile Photo'),
+            ),
+            const SizedBox(height: 24),
+            TextField(
+              controller: nameController,
+              maxLength: 40,
+              textCapitalization: TextCapitalization.words,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Your Name',
+                labelStyle: const TextStyle(color: Colors.white70),
+                filled: true,
+                fillColor: panel,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+            if (error.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(error, style: const TextStyle(color: Colors.redAccent)),
+            ],
+            const SizedBox(height: 20),
+            SizedBox(
+              height: 52,
+              child: FilledButton(
+                onPressed: saving ? null : saveProfile,
+                child: saving
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Save & Continue'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

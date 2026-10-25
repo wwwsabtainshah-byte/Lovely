@@ -742,7 +742,7 @@ def my_account(account=Depends(get_current_account)):
     with database() as db:
         current = db.execute(
             "SELECT id, username, approved, banned, role, user_code, "
-            "display_name, profile_photo "
+            "display_name, profile_photo, profile_completed "
             "FROM accounts WHERE id = ?",
             (account["id"],),
         ).fetchone()
@@ -776,7 +776,7 @@ def my_account(account=Depends(get_current_account)):
             )
             current = db.execute(
                 "SELECT id, username, approved, banned, role, user_code, "
-            "display_name, profile_photo "
+            "display_name, profile_photo, profile_completed "
                 "FROM accounts WHERE id = ?",
                 (current["id"],),
             ).fetchone()
@@ -787,8 +787,9 @@ def my_account(account=Depends(get_current_account)):
             "banned": bool(current["banned"]),
             "role": current["role"] or "user",
             "user_code": get_effective_user_code(db, current),
-        "display_name": current["display_name"] or "",
-        "profile_photo": current["profile_photo"] or "",
+            "display_name": current["display_name"] or "",
+            "profile_photo": current["profile_photo"] or "",
+            "profile_completed": bool(current["profile_completed"]),
             "message": "Authenticated",
         }
 
@@ -808,7 +809,8 @@ def update_my_profile(payload: dict, account=Depends(get_current_account)):
 
     with database() as db:
         db.execute(
-            "UPDATE accounts SET display_name = ?, profile_photo = ? WHERE id = ?",
+            "UPDATE accounts SET display_name = ?, profile_photo = ?, "
+            "profile_completed = 1 WHERE id = ?",
             (display_name, profile_photo, account["id"]),
         )
     return {"success": True, "display_name": display_name, "profile_photo": profile_photo}
