@@ -1141,6 +1141,7 @@ class _VoiceRoomsPageState extends State<VoiceRoomsPage> {
 }
 
 
+
 class VoiceRoomDetailPage extends StatefulWidget {
   final String roomName;
   final String hostName;
@@ -1158,52 +1159,44 @@ class VoiceRoomDetailPage extends StatefulWidget {
 }
 
 class _VoiceRoomDetailPageState extends State<VoiceRoomDetailPage> {
+  static const gold = Color(0xFFFFC451);
+  static const dark = Color(0xFF160900);
+  static const panel = Color(0xFF2B1708);
+
   MediaStream? _localStream;
   bool _muted = true;
   bool _speaker = true;
   bool _starting = false;
-  String _status = 'Mic off — audio not connected';
+  bool _minimized = false;
+  final _message = TextEditingController();
+  final List<String> _messages = ['Welcome to Lovely Party Room! 🎉'];
 
   Future<void> _toggleMic() async {
     if (_starting) return;
     if (_localStream != null) {
-      final tracks = _localStream!.getAudioTracks();
-      if (tracks.isNotEmpty) {
+      setState(() {
         _muted = !_muted;
-        for (final track in tracks) {
-          track.enabled = !_muted;
+        for (final t in _localStream!.getAudioTracks()) {
+          t.enabled = !_muted;
         }
-        if (mounted) {
-          setState(() => _status = _muted
-              ? 'Microphone muted (local only)'
-              : 'Microphone on (local only; room audio not connected)');
-        }
-      }
+      });
       return;
     }
-
-    setState(() {
-      _starting = true;
-      _status = 'Requesting microphone permission...';
-    });
-
+    setState(() => _starting = true);
     try {
-      final stream = await navigator.mediaDevices.getUserMedia({
+      _localStream = await navigator.mediaDevices.getUserMedia({
         'audio': true,
         'video': false,
       });
-      for (final track in stream.getAudioTracks()) {
-        track.enabled = true;
+      for (final t in _localStream!.getAudioTracks()) {
+        t.enabled = true;
       }
-      _localStream = stream;
-      _muted = false;
+      if (mounted) setState(() => _muted = false);
+    } catch (_) {
       if (mounted) {
-        setState(() => _status =
-            'Microphone active on this phone; remote audio is not connected yet');
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _status = 'Microphone error: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Microphone permission nahi mili')),
+        );
       }
     } finally {
       if (mounted) setState(() => _starting = false);
@@ -1216,95 +1209,416 @@ class _VoiceRoomDetailPageState extends State<VoiceRoomDetailPage> {
     if (mounted) Navigator.pop(context);
   }
 
+  void _sendMessage() {
+    final text = _message.text.trim();
+    if (text.isEmpty) return;
+    setState(() {
+      _messages.add('You: $text');
+      _message.clear();
+    });
+  }
+
+  void _panel(String title, IconData icon, List<String> options) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: panel,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Icon(icon, color: gold, size: 28),
+                const SizedBox(width: 12),
+                Expanded(child: Text(title, style: const TextStyle(
+                  color: Colors.white, fontSize: 21, fontWeight: FontWeight.bold,
+                ))),
+                IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close, color: Colors.white),
+                ),
+              ]),
+              const Divider(color: gold),
+              ...options.map((option) => ListTile(
+                leading: const Icon(Icons.circle, color: gold, size: 10),
+                title: Text(option, style: const TextStyle(color: Colors.white)),
+                trailing: const Icon(Icons.chevron_right, color: gold),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('$option — baad mein configure hoga')),
+                  );
+                },
+              )),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _settings() => _panel('Room Settings', Icons.settings, const [
+    'Music & Playlist',
+    'Room Information',
+    'Change Room Name',
+    'Room Announcement',
+    'Room Cover',
+    'Room Mode',
+    'Room Theme & Decoration',
+    'Seat Settings',
+    'Member Management',
+    'Invite Friends',
+  ]);
+
+  Widget _action(IconData icon, String label, VoidCallback tap,
+      {bool active = false, Color? iconColor}) {
+    return SizedBox(
+      width: 66,
+      child: InkWell(
+        onTap: tap,
+        borderRadius: BorderRadius.circular(30),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: active ? const Color(0xFF064B38) : panel,
+              border: Border.all(
+                color: active ? const Color(0xFF00E6A1) : gold.withOpacity(.7),
+              ),
+            ),
+            child: Icon(icon, color: iconColor ??
+                (active ? const Color(0xFF00E6A1) : gold)),
+          ),
+          const SizedBox(height: 4),
+          Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white, fontSize: 9)),
+        ]),
+      ),
+    );
+  }
+
+  Widget _seat(int number, {String? name, bool host = false, bool special = false}) {
+    return InkWell(
+      onTap: () => _panel(
+        host ? 'Room Host' : (special ? 'Special Seat' : 'Seat $number'),
+        Icons.event_seat,
+        const ['Take a seat', 'Request microphone', 'View profile'],
+      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Container(
+          width: host ? 74 : 53,
+          height: host ? 74 : 53,
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFFF0A3), Color(0xFFFFA21D), Color(0xFF6F3100)],
+            ),
+            boxShadow: [BoxShadow(color: gold.withOpacity(.2), blurRadius: 8)],
+          ),
+          child: Container(
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle, color: Color(0xFF281406),
+            ),
+            child: Icon(
+              special ? Icons.add : Icons.person,
+              color: gold, size: host ? 36 : 27,
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          constraints: const BoxConstraints(maxWidth: 92),
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(.5),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            host ? '👑 ${name ?? widget.hostName}' :
+              (special ? 'Special Seat' : '$number  ${name ?? "Join"}'),
+            maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: special ? gold : Colors.white, fontSize: 9),
+          ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _sideButton(IconData icon, String title, String subtitle,
+      VoidCallback tap) {
+    return Expanded(
+      child: InkWell(
+        onTap: tap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+          decoration: BoxDecoration(
+            color: panel, borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: gold.withOpacity(.35)),
+          ),
+          child: Row(children: [
+            Icon(icon, color: gold, size: 22),
+            const SizedBox(width: 5),
+            Expanded(child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(
+                  color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold,
+                )),
+                Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white60, fontSize: 8)),
+              ],
+            )),
+            const Icon(Icons.chevron_right, color: gold, size: 15),
+          ]),
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _localStream?.dispose();
+    _message.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final count = widget.seatCount.clamp(1, 50);
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.roomName,
-            maxLines: 1, overflow: TextOverflow.ellipsis),
-      ),
-      body: Column(
-        children: [
-          const SizedBox(height: 20),
-          const CircleAvatar(radius: 42, child: Icon(Icons.person, size: 48)),
-          const SizedBox(height: 8),
-          Text(widget.hostName,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const Text('Room Host'),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Text(_status, textAlign: TextAlign.center),
+      backgroundColor: dark,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter, end: Alignment.bottomCenter,
+            colors: [Color(0xFF492000), Color(0xFF1B0B02), Color(0xFF080402)],
           ),
-          Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: widget.seatCount,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                mainAxisSpacing: 18,
-                crossAxisSpacing: 12,
-                childAspectRatio: 0.8,
+        ),
+        child: SafeArea(child: Column(children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 5, 5, 7),
+            child: Row(children: [
+              Container(
+                width: 47, height: 47,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle, border: Border.all(color: gold, width: 2),
+                ),
+                child: const Icon(Icons.person, color: gold, size: 29),
               ),
-              itemBuilder: (context, index) => Column(
+              const SizedBox(width: 8),
+              Expanded(child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    radius: 29,
-                    backgroundColor:
-                        index == 0 ? Colors.pink.shade100 : Colors.grey.shade800,
-                    child: Icon(index == 0 ? Icons.person : Icons.add, size: 28),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(index == 0 ? 'Host' : 'Seat ${index + 1}',
-                      style: const TextStyle(fontSize: 11),
-                      overflow: TextOverflow.ellipsis),
+                  Text(widget.roomName, maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white,
+                      fontWeight: FontWeight.bold, fontSize: 15)),
+                  const Text('Room ID: 728394',
+                    style: TextStyle(color: Colors.white70, fontSize: 10)),
                 ],
+              )),
+              IconButton(
+                onPressed: () => _panel('Share Room', Icons.share,
+                    const ['Invite Friends', 'Copy Room ID']),
+                icon: const Icon(Icons.share, color: gold),
               ),
-            ),
+              IconButton(
+                onPressed: () => setState(() => _minimized = !_minimized),
+                icon: Icon(_minimized ? Icons.fullscreen : Icons.fullscreen_exit,
+                    color: gold),
+              ),
+              IconButton(
+                onPressed: _leaveRoom,
+                icon: const Icon(Icons.close, color: Colors.redAccent),
+              ),
+            ]),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
-            child: Row(
+          if (!_minimized) ...[
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 10),
+              padding: const EdgeInsets.symmetric(vertical: 9),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(.4),
+                borderRadius: BorderRadius.circular(13),
+                border: Border.all(color: gold.withOpacity(.4)),
+              ),
+              child: const Row(children: [
+                Expanded(child: _PartyStat(Icons.people, '1 / 50', 'Visitors')),
+                _PartyDivider(),
+                Expanded(child: _PartyStat(Icons.card_giftcard, '0', 'Total Gifts')),
+                _PartyDivider(),
+                Expanded(child: _PartyStat(Icons.local_fire_department, 'New', 'Popularity')),
+              ]),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(height: 112, child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Column(mainAxisSize: MainAxisSize.min, children: [
-                  IconButton.filled(
-                    onPressed: _starting ? null : _toggleMic,
-                    icon: Icon(_muted ? Icons.mic_off : Icons.mic),
-                  ),
-                  Text(_starting ? 'Starting...' : (_muted ? 'Mic Off' : 'Mic On')),
-                ]),
-                Column(mainAxisSize: MainAxisSize.min, children: [
-                  IconButton.filled(
-                    onPressed: () async {
-                      _speaker = !_speaker;
-                      await Helper.setSpeakerphoneOn(_speaker);
-                      if (mounted) setState(() {});
-                    },
-                    icon: Icon(_speaker ? Icons.volume_up : Icons.volume_off),
-                  ),
-                  Text(_speaker ? 'Speaker' : 'Earpiece'),
-                ]),
-                Column(mainAxisSize: MainAxisSize.min, children: [
-                  IconButton.filled(
-                    style: IconButton.styleFrom(backgroundColor: Colors.red),
-                    onPressed: _leaveRoom,
-                    icon: const Icon(Icons.call_end),
-                  ),
-                  const Text('Leave'),
-                ]),
+                _seat(0, special: true),
+                _seat(1, name: widget.hostName, host: true),
+                _seat(2, special: true),
               ],
+            )),
+          ],
+          Expanded(child: Container(
+            margin: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(.18),
+              border: Border(top: BorderSide(color: gold.withOpacity(.3))),
+            ),
+            child: GridView.builder(
+              itemCount: count,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 5, mainAxisSpacing: 7,
+                crossAxisSpacing: 3, childAspectRatio: .78,
+              ),
+              itemBuilder: (context, i) => _seat(
+                i + 1,
+                name: i < 4 ? ['Zain', 'Nimra', 'Ali', 'Sana'][i] : null,
+              ),
+            ),
+          )),
+          SizedBox(height: 150, child: Row(children: [
+            Expanded(flex: 7, child: Container(
+              margin: const EdgeInsets.fromLTRB(8, 0, 3, 5),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(.45),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: gold.withOpacity(.25)),
+              ),
+              child: Column(children: [
+                Expanded(child: ListView.builder(
+                  itemCount: _messages.length,
+                  itemBuilder: (context, i) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(_messages[i], maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: i == 0 ? gold : Colors.white, fontSize: 10)),
+                  ),
+                )),
+                Row(children: [
+                  Expanded(child: TextField(
+                    controller: _message,
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                    decoration: InputDecoration(
+                      hintText: 'Type a message...',
+                      hintStyle: const TextStyle(color: Colors.white54, fontSize: 11),
+                      filled: true, fillColor: const Color(0xFF211207),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(22),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    onSubmitted: (_) => _sendMessage(),
+                  )),
+                  IconButton(
+                    onPressed: _sendMessage,
+                    icon: const Icon(Icons.send, color: gold, size: 20),
+                  ),
+                ]),
+              ]),
+            )),
+            Expanded(flex: 3, child: Column(children: [
+              _sideButton(Icons.sports_esports, 'Games', 'Play games',
+                () => _panel('Games', Icons.sports_esports,
+                    const ['Games will be added later'])),
+              const SizedBox(height: 4),
+              _sideButton(Icons.card_giftcard, 'Gifts', 'Send gifts',
+                () => _panel('Gifts', Icons.card_giftcard,
+                    const ['Gift shop will be added later'])),
+              const SizedBox(height: 4),
+              _sideButton(Icons.workspace_premium, 'Rewards', 'Room rewards',
+                () => _panel('Rewards', Icons.workspace_premium,
+                    const ['Rewards panel'])),
+            ])),
+          ])),
+          Container(
+            padding: const EdgeInsets.fromLTRB(2, 8, 2, 7),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(.55),
+              border: Border(top: BorderSide(color: gold.withOpacity(.25))),
+            ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                _action(Icons.emoji_emotions, 'Emoji',
+                  () => _panel('Emoji', Icons.emoji_emotions, const ['Emoji panel'])),
+                _action(Icons.card_giftcard, 'Gifts',
+                  () => _panel('Gifts', Icons.card_giftcard, const ['Gift shop coming later'])),
+                _action(Icons.sports_esports, 'Games',
+                  () => _panel('Games', Icons.sports_esports, const ['Games coming later'])),
+                _action(_muted ? Icons.mic_off : Icons.mic,
+                  _starting ? 'Starting' : (_muted ? 'Mic OFF' : 'Mic ON'),
+                  _toggleMic, active: !_muted),
+                _action(_speaker ? Icons.volume_up : Icons.volume_off,
+                  _speaker ? 'Speaker ON' : 'Speaker OFF', () async {
+                    final next = !_speaker;
+                    try { await Helper.setSpeakerphoneOn(next); } catch (_) {}
+                    if (mounted) setState(() => _speaker = next);
+                  }, active: _speaker),
+                _action(Icons.people, 'Invite',
+                  () => _panel('Invite Friends', Icons.people,
+                      const ['Invite Friends', 'Copy Room ID'])),
+                _action(Icons.chat_bubble, 'Chat',
+                  () => _panel('Room Chat', Icons.chat_bubble,
+                      const ['Use the message box in the room'])),
+                _action(Icons.settings, 'Settings', _settings),
+                _action(Icons.logout, 'Leave', _leaveRoom,
+                    iconColor: Colors.redAccent),
+              ]),
             ),
           ),
-        ],
+          Padding(
+            padding: const EdgeInsets.only(bottom: 3),
+            child: Text(_muted ? 'Mic off' : 'Mic on — local microphone only',
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white54, fontSize: 9)),
+          ),
+        ])),
       ),
     );
   }
+}
+
+class _PartyStat extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
+  const _PartyStat(this.icon, this.value, this.label);
+
+  @override
+  Widget build(BuildContext context) => Column(children: [
+    Icon(icon, color: const Color(0xFFFFC451), size: 20),
+    const SizedBox(height: 3),
+    Text(value, style: const TextStyle(
+      color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+    Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+      style: const TextStyle(color: Colors.white70, fontSize: 9)),
+  ]);
+}
+
+class _PartyDivider extends StatelessWidget {
+  const _PartyDivider();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 34, width: 1, color: const Color(0x66FFC451));
 }
 
 // ---------------- MOMENT ----------------
