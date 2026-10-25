@@ -56,7 +56,7 @@ class LovelyChatApp extends StatelessWidget {
 
 // ---------------- LOGIN / REGISTER ----------------
 
-const lovelyApi = 'http://127.0.0.1:8000';
+const lovelyApi = 'https://lovely.fastapicloud.dev';
 const lovelyStorage = FlutterSecureStorage();
 
 class LovelyAuthGate extends StatefulWidget {
@@ -1533,31 +1533,128 @@ class _ProfilePageState extends State<ProfilePage> {
             Icons.account_balance_wallet_rounded,
             'Wallet',
             'Coins and Diamonds',
-            () => showInfo(
-              context,
-              'Wallet',
-              'Asal balance server par mehfooz hoga.',
-            ),
+            () async {
+  try {
+    final token = await lovelyStorage.read(key: 'lovely_token');
+    if (token == null) {
+      if (context.mounted) showInfo(context, 'Wallet', 'Please login again.');
+      return;
+    }
+
+    final response = await http.get(
+      Uri.parse('$lovelyApi/wallet/me'),
+      headers: {'Authorization': 'Bearer $token'},
+    ).timeout(const Duration(seconds: 15));
+
+    if (!context.mounted) return;
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      showInfo(
+        context,
+        'My Wallet',
+        'Coins: ${data['coins'] ?? 0}\nDiamonds: ${data['diamonds'] ?? 0}',
+      );
+    } else {
+      showInfo(context, 'Wallet Error', 'Server error: ${response.statusCode}');
+    }
+  } catch (e) {
+    if (context.mounted) showInfo(context, 'Wallet Error', e.toString());
+  }
+},
           ),
           featureCard(
             Icons.card_giftcard_rounded,
             'Gift Bag',
             'Gifts and inventory',
-            () => showInfo(
-              context,
-              'Gift Bag',
-              'Aap ki inventory server se connect hogi.',
-            ),
+            () async {
+  try {
+    final token = await lovelyStorage.read(key: 'lovely_token');
+    if (token == null) {
+      if (context.mounted) showInfo(context, 'Gift Bag', 'Please login again.');
+      return;
+    }
+
+    final response = await http.get(
+      Uri.parse('$lovelyApi/inventory/me'),
+      headers: {'Authorization': 'Bearer $token'},
+    ).timeout(const Duration(seconds: 15));
+
+    if (!context.mounted) return;
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      showInfo(context, 'My Gift Bag', const JsonEncoder.withIndent('  ').convert(data));
+    } else {
+      showInfo(context, 'Gift Bag Error', 'Server error: ${response.statusCode}');
+    }
+  } catch (e) {
+    if (context.mounted) showInfo(context, 'Gift Bag Error', e.toString());
+  }
+},
           ),
           featureCard(
             Icons.workspace_premium_rounded,
             'VIP & Frames',
             'VIP levels and profile frames',
-            () => showInfo(
-              context,
-              'VIP & Frames',
-              'VIP aur frames ka record server par mehfooz hoga.',
-            ),
+            () async {
+  try {
+    final token = await lovelyStorage.read(key: 'lovely_token');
+
+    if (token == null) {
+      if (context.mounted) {
+        showInfo(context, 'VIP & Frames', 'Please login again.');
+      }
+      return;
+    }
+
+    final headers = {'Authorization': 'Bearer $token'};
+
+    final results = await Future.wait([
+      http.get(
+        Uri.parse('$lovelyApi/vip/me'),
+        headers: headers,
+      ),
+      http.get(
+        Uri.parse('$lovelyApi/store/items'),
+        headers: headers,
+      ),
+    ]).timeout(const Duration(seconds: 15));
+
+    if (!context.mounted) return;
+
+    if (results[0].statusCode == 200 &&
+        results[1].statusCode == 200) {
+
+      final vip = jsonDecode(results[0].body);
+      final store = jsonDecode(results[1].body);
+
+      final items = store['items'] as List? ?? [];
+
+      final itemNames = items.map((item) =>
+        '${item['name']} - ${item['price']}'
+      ).join('\n');
+
+      showInfo(
+        context,
+        'VIP & Frames',
+        'VIP Level: ${vip['vip_level']}\n'
+        'Expiry: ${vip['expires_at'] ?? 'Not active'}\n\n'
+        'Available Items:\n$itemNames',
+      );
+    } else {
+      showInfo(
+        context,
+        'VIP Error',
+        'Server response: ${results[0].statusCode}, ${results[1].statusCode}',
+      );
+    }
+  } catch (e) {
+    if (context.mounted) {
+      showInfo(context, 'VIP Error', e.toString());
+    }
+  }
+},
           ),
           featureCard(
             Icons.people_alt_rounded,
