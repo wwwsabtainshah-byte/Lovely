@@ -1494,7 +1494,7 @@ class _VoiceRoomDetailPageState extends State<VoiceRoomDetailPage> {
         scheme: wsScheme,
         host: base.host,
         port: base.hasPort ? base.port : null,
-        path: '/ws/voice/${Uri.encodeComponent(widget.roomId)}',
+        path: '/ws/voice/${Uri.encodeComponent(widget.roomId.toString())}',
         queryParameters: {'token': token, 'username': _voiceUsername},
       );
 
@@ -2060,12 +2060,6 @@ class _VoiceRoomDetailPageState extends State<VoiceRoomDetailPage> {
     );
   }
 
-  @override
-  void dispose() {
-    _localStream?.dispose();
-    _message.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
