@@ -716,6 +716,36 @@ def google_login(data: dict):
             ).fetchone()["id"]
             log_event(db, "GOOGLE_LOGIN_ACCOUNT_CREATED", username, device_id)
 
+        # Assign a permanent numeric ID to every Google account.
+        saved_code = db.execute(
+            "SELECT user_code FROM accounts WHERE id = ?", (account_id,)
+        ).fetchone()["user_code"]
+
+        if not str(saved_code or "").strip():
+            rows = db.execute(
+                "SELECT user_code FROM accounts "
+                "WHERE user_code IS NOT NULL AND TRIM(user_code) != ''"
+            ).fetchall()
+            numeric_codes = [
+                int(row["user_code"]) for row in rows
+                if str(row["user_code"]).isdigit()
+            ]
+            candidate = max([100000, *numeric_codes]) + 1
+            while db.execute(
+                "SELECT 1 FROM accounts WHERE user_code = ?",
+                (str(candidate),),
+            ).fetchone():
+                candidate += 1
+            db.execute(
+                "UPDATE accounts SET user_code = ? WHERE id = ? "
+                "AND (user_code IS NULL OR TRIM(user_code) = '')",
+                (str(candidate), account_id),
+            )
+
+        saved_code = db.execute(
+            "SELECT user_code FROM accounts WHERE id = ?", (account_id,)
+        ).fetchone()["user_code"]
+
         token = secrets.token_urlsafe(32)
         token_hash = hashlib.sha256(token.encode()).hexdigest()
         db.execute(
@@ -729,6 +759,7 @@ def google_login(data: dict):
         "success": True,
         "token": token,
         "username": username,
+        "user_code": saved_code,
         "message": "Google login successful",
     }
 
