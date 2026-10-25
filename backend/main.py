@@ -1809,15 +1809,206 @@ class EquipItemRequest(BaseModel):
     item_id: str
     item_type: str
 
-@app.get("/store/items")
-def get_store_items(account=Depends(get_current_account)):
-    items = [
-        {"id": "frame_gold_king", "name": "Gold King Frame", "type": "frame", "price": 500, "icon": "/assets/store/frame_gold.png"},
-        {"id": "frame_vip_star", "name": "VIP Star Frame", "type": "frame", "price": 1000, "icon": "/assets/store/frame_star.png"},
-        {"id": "entry_sports_car", "name": "Sports Car Entry", "type": "entry_effect", "price": 2000, "icon": "/assets/store/car.png"},
-        {"id": "entry_dragon_fly", "name": "Dragon Ride Entry", "type": "entry_effect", "price": 5000, "icon": "/assets/store/dragon.png"}
+
+class OwnerStoreItemRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=80)
+    item_type: str
+    price: int = Field(ge=0, le=1000000000)
+    icon: str = Field(min_length=1, max_length=500)
+
+
+class OwnerCoinRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=80)
+    amount: int = Field(gt=0, le=1000000000)
+    description: str = Field(default="Owner coin adjustment", max_length=200)
+
+
+class OwnerGrantItemRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=80)
+    item_id: str = Field(min_length=1, max_length=100)
+
+
+def ensure_store_catalog(db):
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS store_catalog (
+            item_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            item_type TEXT NOT NULL,
+            price INTEGER NOT NULL CHECK(price >= 0),
+            icon TEXT NOT NULL,
+            active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    now = hosting_now()
+    defaults = [
+        ("frame_gold_king", "Gold King Frame", "frame", 500, "/assets/store/frame_gold.png"),
+        ("frame_vip_star", "VIP Star Frame", "frame", 1000, "/assets/store/frame_star.png"),
+        ("entry_sports_car", "Sports Car Entry", "entry_effect", 2000, "/assets/store/car.png"),
+        ("entry_dragon_fly", "Dragon Ride Entry", "entry_effect", 5000, "/assets/store/dragon.png"),
     ]
-    return {"success": True, "items": items}
+    for item_id, name, item_type, price, icon in defaults:
+        db.execute("""
+            INSERT OR IGNORE INTO store_catalog
+            (item_id,name,item_type,price,icon,active,created_at,updated_at)
+            VALUES (?,?,?,?,?,1,?,?)
+        """, (item_id, name, item_type, price, icon, now, now))
+
+
+@app.get("/owner/store/items")
+def owner_store_items(owner=Depends(require_owner)):
+    with database() as db:
+        ensure_store_catalog(db)
+        rows = db.execute(
+            "SELECT item_id,name,item_type,price,icon,active,created_at,updated_at "
+            "FROM store_catalog ORDER BY created_at DESC"
+        ).fetchall()
+        db.commit()
+        return {"items": [dict(r) for r in rows]}
+
+
+@app.post("/owner/store/items")
+def owner_add_store_item(data: OwnerStoreItemRequest, owner=Depends(require_owner)):
+    allowed = {"frame", "gift", "entry_effect", "badge"}
+    if data.item_type not in allowed:
+        raise HTTPException(status_code=400, detail="Invalid item_type")
+    item_id = data.item_type + "_" + secrets.token_hex(6)
+    now = hosting_now()
+    with database() as db:
+        ensure_store_catalog(db)
+        db.execute(
+            "INSERT INTO store_catalog "
+            "(item_id,name,item_type,price,icon,active,created_at,updated_at) "
+            "VALUES (?,?,?,?,?,1,?,?)",
+            (item_id, data.name, data.item_type, data.price, data.icon, now, now)
+        )
+        db.commit()
+    return {"ok": True, "item_id": item_id}
+
+
+@app.put("/owner/store/items/{item_id}")
+def owner_edit_store_item(item_id: str, data: OwnerStoreItemRequest, owner=Depends(require_owner)):
+    if data.item_type not in {"frame", "gift", "entry_effect", "badge"}:
+        raise HTTPException(status_code=400, detail="Invalid item_type")
+    with database() as db:
+        ensure_store_catalog(db)
+        cur = db.execute(
+            "UPDATE store_catalog SET name=?,item_type=?,price=?,icon=?,updated_at=? "
+            "WHERE item_id=?",
+            (data.name, data.item_type, data.price, data.icon, hosting_now(), item_id)
+        )
+        db.commit()
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Store item not found")
+    return {"ok": True}
+
+
+@app.delete("/owner/store/items/{item_id}")
+def owner_delete_store_item(item_id: str, owner=Depends(require_owner)):
+    with database() as db:
+        ensure_store_catalog(db)
+        cur = db.execute(
+            "UPDATE store_catalog SET active=0,updated_at=? WHERE item_id=?",
+            (hosting_now(), item_id)
+        )
+        db.commit()
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Store item not found")
+    return {"ok": True}
+
+
+@app.post("/owner/coins/add")
+def owner_add_coins(data: OwnerCoinRequest, owner=Depends(require_owner)):
+    with database() as db:
+        cols = {r[1] for r in db.execute("PRAGMA table_info(accounts)").fetchall()}
+        lookup_col = "user_code" if "user_code" in cols else None
+        if lookup_col:
+            account = db.execute(
+                f"SELECT id,username FROM accounts WHERE username=? OR user_code=? LIMIT 1",
+                (data.username, data.username)
+            ).fetchone()
+        else:
+            account = db.execute(
+                "SELECT id,username FROM accounts WHERE username=? LIMIT 1",
+                (data.username,)
+            ).fetchone()
+        if not account:
+            raise HTTPException(status_code=404, detail="User not found")
+        account_id = account["id"]
+        get_wallet_row(db, account_id)
+        db.execute(
+            "UPDATE wallets SET coins=coins+?,updated_at=? WHERE account_id=?",
+            (data.amount, hosting_now(), account_id)
+        )
+        db.execute(
+            "INSERT INTO wallet_transactions "
+            "(account_id,amount,transaction_type,description,created_at) VALUES (?,?,?,?,?)",
+            (account_id, data.amount, "owner_credit", data.description, hosting_now())
+        )
+        log_event(db, "owner_added_coins", account["username"], None)
+        db.commit()
+    return {"ok": True, "username": account["username"], "coins_added": data.amount}
+
+
+@app.post("/owner/store/grant")
+def owner_grant_store_item(data: OwnerGrantItemRequest, owner=Depends(require_owner)):
+    with database() as db:
+        ensure_store_catalog(db)
+        cols = {r[1] for r in db.execute("PRAGMA table_info(accounts)").fetchall()}
+        if "user_code" in cols:
+            account = db.execute(
+                "SELECT id,username FROM accounts WHERE username=? OR user_code=? LIMIT 1",
+                (data.username, data.username)
+            ).fetchone()
+        else:
+            account = db.execute(
+                "SELECT id,username FROM accounts WHERE username=? LIMIT 1",
+                (data.username,)
+            ).fetchone()
+        if not account:
+            raise HTTPException(status_code=404, detail="User not found")
+        item = db.execute(
+            "SELECT item_id,item_type FROM store_catalog WHERE item_id=? AND active=1",
+            (data.item_id,)
+        ).fetchone()
+        if not item:
+            raise HTTPException(status_code=404, detail="Active store item not found")
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS user_inventory (
+                account_id TEXT NOT NULL,
+                item_id TEXT NOT NULL,
+                item_type TEXT NOT NULL,
+                is_equipped INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL,
+                UNIQUE(account_id,item_id)
+            )
+        """)
+        db.execute(
+            "INSERT OR IGNORE INTO user_inventory "
+            "(account_id,item_id,item_type,is_equipped,created_at) VALUES (?,?,?,?,?)",
+            (account["id"], item["item_id"], item["item_type"], 0, hosting_now())
+        )
+        log_event(db, "owner_granted_store_item", account["username"], None)
+        db.commit()
+    return {"ok": True, "username": account["username"], "item_id": data.item_id}
+
+
+@app.get("/store/items")
+def store_items():
+    with database() as db:
+        ensure_store_catalog(db)
+        rows = db.execute(
+            "SELECT item_id,name,item_type,price,icon FROM store_catalog "
+            "WHERE active=1 ORDER BY price ASC"
+        ).fetchall()
+        db.commit()
+        return {"items": [
+            {"id": r["item_id"], "name": r["name"], "type": r["item_type"],
+             "price": r["price"], "icon": r["icon"]}
+            for r in rows
+        ]}
+
 
 @app.get("/inventory/me")
 def get_user_inventory(account=Depends(get_current_account)):
@@ -1850,27 +2041,45 @@ def get_user_inventory(account=Depends(get_current_account)):
 @app.post("/store/buy")
 def buy_store_item(data: BuyItemRequest, account=Depends(get_current_account)):
     with database() as db:
+        ensure_store_catalog(db)
+        item = db.execute(
+            "SELECT item_id, item_type, price FROM store_catalog "
+            "WHERE item_id=? AND active=1",
+            (data.item_id,)
+        ).fetchone()
+
+        if not item:
+            raise HTTPException(status_code=404, detail="Active store item not found")
+
+        # Price and type come from the server catalog, never from the client.
+        price = int(item["price"])
+        item_type = item["item_type"]
         wallet = get_wallet_row(db, account["id"])
-        if wallet["diamonds"] < data.price:
+
+        if int(wallet["diamonds"]) < price:
             raise HTTPException(status_code=400, detail="Insufficient diamonds")
-            
+
         db.execute(
-            "UPDATE wallets SET diamonds = diamonds - ?, updated_at = ? WHERE account_id = ?",
-            (data.price, hosting_now(), account["id"])
+            "UPDATE wallets SET diamonds=diamonds-?, updated_at=? WHERE account_id=?",
+            (price, hosting_now(), account["id"])
         )
-        
+
         db.execute(
-            "INSERT INTO user_inventory (account_id, item_id, item_type, is_equipped, created_at) VALUES (?, ?, ?, 0, ?)",
-            (account["id"], data.item_id, data.item_type, hosting_now())
+            "INSERT INTO user_inventory "
+            "(account_id, item_id, item_type, is_equipped, created_at) "
+            "VALUES (?, ?, ?, 0, ?)",
+            (account["id"], item["item_id"], item_type, hosting_now())
         )
-        
+
         db.execute(
-            "INSERT INTO wallet_transactions (account_id, amount, transaction_type, description, created_at) VALUES (?, ?, ?, ?, ?)",
-            (account["id"], -data.price, "store_purchase", f"Bought {data.item_id}", hosting_now())
+            "INSERT INTO wallet_transactions "
+            "(account_id, amount, transaction_type, description, created_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (account["id"], -price, "store_purchase",
+             f"Bought {item['item_id']}", hosting_now())
         )
-        
         db.commit()
-        
+
     return {"success": True, "message": f"Successfully purchased {data.item_id}"}
 
 @app.post("/inventory/equip")
