@@ -2542,6 +2542,90 @@ class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic>? account;
   bool photoSaving = false;
 
+
+  Future<void> editProfileName() async {
+    final controller = TextEditingController(
+      text: (account?['display_name'] ?? account?['username'] ?? '').toString(),
+    );
+
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Edit Profile Name'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 40,
+          decoration: const InputDecoration(
+            hintText: 'Enter your name',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(
+              dialogContext,
+              controller.text.trim(),
+            ),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+
+    if (newName == null) return;
+    if (newName.isEmpty || newName.length > 40) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Name must be 1 to 40 characters')),
+        );
+      }
+      return;
+    }
+
+    try {
+      final token = await lovelyStorage.read(key: 'lovely_token');
+      if (token == null) throw Exception('Login required');
+
+      final response = await http.put(
+        Uri.parse('$lovelyApi/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'display_name': newName,
+          'profile_photo': (account?['profile_photo'] ?? '').toString(),
+        }),
+      ).timeout(const Duration(seconds: 20));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode != 200 || data['success'] != true) {
+        throw Exception(data['detail']?.toString() ?? 'Name save failed');
+      }
+
+      if (!mounted) return;
+      setState(() {
+        account ??= {};
+        account!['display_name'] = newName;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile name saved')),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> changeProfilePhoto() async {
     if (photoSaving) return;
     try {
@@ -2721,13 +2805,27 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 13),
-                Text(
-                  account?['username']?.toString() ?? 'Lovely User',
-                  style: TextStyle(
-                    fontSize: 23,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.3,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        (account?['display_name'] ?? '').toString().trim().isNotEmpty
+                            ? account!['display_name'].toString()
+                            : (account?['username'] ?? 'Lovely User').toString(),
+                        style: const TextStyle(
+                          fontSize: 23,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Edit Profile Name',
+                      onPressed: editProfileName,
+                      icon: const Icon(Icons.edit_rounded, size: 20),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 5),
                 Container(
