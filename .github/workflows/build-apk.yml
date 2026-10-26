@@ -30,7 +30,32 @@ jobs:
           cache: true
 
       - name: Generate Android project
-        run: flutter create --platforms=android .
+        run: flutter create --platforms=android --org com.lovelychat .
+
+      - name: Set Android application ID
+        run: |
+          python3 - <<'SCRIPT'
+          from pathlib import Path
+          candidates = [
+              Path("android/app/build.gradle"),
+              Path("android/app/build.gradle.kts"),
+          ]
+          app = next((p for p in candidates if p.exists()), None)
+          if app is None:
+              raise SystemExit("Android app Gradle file not found.")
+          text = app.read_text()
+          import re
+          if re.search(r'(?m)^\s*namespace\s+', text):
+              text = re.sub(r'(?m)^\s*namespace\s+["\'][^"\']+["\']', '    namespace "com.lovelychat.app"', text, count=1)
+          else:
+              text = text.replace("android {", 'android {\n    namespace "com.lovelychat.app"', 1)
+          if re.search(r'(?m)^\s*applicationId\s+', text):
+              text = re.sub(r'(?m)^\s*applicationId\s+["\'][^"\']+["\']', '        applicationId "com.lovelychat.app"', text, count=1)
+          else:
+              text = text.replace("defaultConfig {", 'defaultConfig {\n        applicationId "com.lovelychat.app"', 1)
+          app.write_text(text)
+          print("Android application ID set to com.lovelychat.app")
+          SCRIPT
 
       - name: Add Firebase Android configuration
         run: |
