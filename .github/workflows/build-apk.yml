@@ -34,28 +34,40 @@ jobs:
 
       - name: Set Android application ID
         run: |
-          python3 - <<'SCRIPT'
+          python3 - <<'PY'
           from pathlib import Path
-          candidates = [
-              Path("android/app/build.gradle"),
-              Path("android/app/build.gradle.kts"),
-          ]
-          app = next((p for p in candidates if p.exists()), None)
-          if app is None:
-              raise SystemExit("Android app Gradle file not found.")
-          text = app.read_text()
           import re
-          if re.search(r'(?m)^\s*namespace\s+', text):
-              text = re.sub(r'(?m)^\s*namespace\s+["\'][^"\']+["\']', '    namespace "com.lovelychat.app"', text, count=1)
+
+          app = next((p for p in [
+              Path("android/app/build.gradle"),
+              Path("android/app/build.gradle.kts")
+          ] if p.exists()), None)
+
+          if app is None:
+              raise SystemExit("Android app Gradle file not found")
+
+          text = app.read_text()
+          kotlin = app.suffix == ".kts"
+
+          ns_pattern = r'(?m)^\s*namespace\s*(?:=\s*)?"[^"]+"'
+          id_pattern = r'(?m)^\s*applicationId\s*(?:=\s*)?"[^"]+"'
+
+          ns = '    namespace = "com.lovelychat.app"' if kotlin else '    namespace "com.lovelychat.app"'
+          aid = '        applicationId = "com.lovelychat.app"' if kotlin else '        applicationId "com.lovelychat.app"'
+
+          if re.search(ns_pattern, text):
+              text = re.sub(ns_pattern, ns, text, count=1)
           else:
-              text = text.replace("android {", 'android {\n    namespace "com.lovelychat.app"', 1)
-          if re.search(r'(?m)^\s*applicationId\s+', text):
-              text = re.sub(r'(?m)^\s*applicationId\s+["\'][^"\']+["\']', '        applicationId "com.lovelychat.app"', text, count=1)
+              text = text.replace("android {", "android {\n" + ns + "\n", 1)
+
+          if re.search(id_pattern, text):
+              text = re.sub(id_pattern, aid, text, count=1)
           else:
-              text = text.replace("defaultConfig {", 'defaultConfig {\n        applicationId "com.lovelychat.app"', 1)
+              text = text.replace("defaultConfig {", "defaultConfig {\n" + aid + "\n", 1)
+
           app.write_text(text)
           print("Android application ID set to com.lovelychat.app")
-          SCRIPT
+          PY
 
       - name: Add Firebase Android configuration
         run: |
@@ -67,36 +79,38 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
 
-          settings = Path("android/settings.gradle")
-          app = Path("android/app/build.gradle")
+          settings = next((p for p in [
+              Path("android/settings.gradle"),
+              Path("android/settings.gradle.kts")
+          ] if p.exists()), None)
 
-          if not settings.exists():
-              settings = Path("android/settings.gradle.kts")
-          if not app.exists():
-              app = Path("android/app/build.gradle.kts")
+          app = next((p for p in [
+              Path("android/app/build.gradle"),
+              Path("android/app/build.gradle.kts")
+          ] if p.exists()), None)
 
-          if not settings.exists() or not app.exists():
-              raise SystemExit("Generated Android Gradle files were not found.")
+          if settings is None or app is None:
+              raise SystemExit("Generated Android Gradle files not found")
 
-          settings_text = settings.read_text()
           plugin = 'id("com.google.gms.google-services") version "4.4.2" apply false'
-          if "com.google.gms.google-services" not in settings_text:
-              marker = "plugins {"
-              if marker not in settings_text:
-                  raise SystemExit("Settings Gradle plugins block not found.")
-              settings_text = settings_text.replace(marker, marker + "\n    " + plugin, 1)
-              settings.write_text(settings_text)
+          st = settings.read_text()
 
-          app_text = app.read_text()
+          if "com.google.gms.google-services" not in st:
+              if "plugins {" not in st:
+                  raise SystemExit("Settings Gradle plugins block not found")
+              st = st.replace("plugins {", "plugins {\n    " + plugin, 1)
+              settings.write_text(st)
+
+          at = app.read_text()
           apply_line = '    id("com.google.gms.google-services")'
-          if "com.google.gms.google-services" not in app_text:
-              marker = "plugins {"
-              if marker not in app_text:
-                  raise SystemExit("App Gradle plugins block not found.")
-              app_text = app_text.replace(marker, marker + "\n" + apply_line, 1)
-              app.write_text(app_text)
 
-          print("Firebase Gradle plugin configured.")
+          if "com.google.gms.google-services" not in at:
+              if "plugins {" not in at:
+                  raise SystemExit("App Gradle plugins block not found")
+              at = at.replace("plugins {", "plugins {\n" + apply_line, 1)
+              app.write_text(at)
+
+          print("Firebase Gradle plugin configured")
           PY
 
       - name: Install dependencies
