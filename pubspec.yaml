@@ -1,5 +1,5 @@
 name: lovely_chat
-description: Lovely single-screen login application.
+description: Lovely login application.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -9,6 +9,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  firebase_core: any
+  firebase_auth: any
+  google_sign_in: any
+  http: any
 
 dev_dependencies:
   flutter_test:

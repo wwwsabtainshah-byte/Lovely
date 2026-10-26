@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - lovely-login-screen-backup
 
 permissions:
   contents: read
@@ -30,6 +31,48 @@ jobs:
 
       - name: Generate Android project
         run: flutter create --platforms=android .
+
+      - name: Add Firebase Android configuration
+        run: |
+          mkdir -p android/app
+          cp google-services.json android/app/google-services.json
+
+      - name: Configure Firebase Gradle plugin
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          settings = Path("android/settings.gradle")
+          app = Path("android/app/build.gradle")
+
+          if not settings.exists():
+              settings = Path("android/settings.gradle.kts")
+          if not app.exists():
+              app = Path("android/app/build.gradle.kts")
+
+          if not settings.exists() or not app.exists():
+              raise SystemExit("Generated Android Gradle files were not found.")
+
+          settings_text = settings.read_text()
+          plugin = 'id("com.google.gms.google-services") version "4.4.2" apply false'
+          if "com.google.gms.google-services" not in settings_text:
+              marker = "plugins {"
+              if marker not in settings_text:
+                  raise SystemExit("Settings Gradle plugins block not found.")
+              settings_text = settings_text.replace(marker, marker + "\n    " + plugin, 1)
+              settings.write_text(settings_text)
+
+          app_text = app.read_text()
+          apply_line = '    id("com.google.gms.google-services")'
+          if "com.google.gms.google-services" not in app_text:
+              marker = "plugins {"
+              if marker not in app_text:
+                  raise SystemExit("App Gradle plugins block not found.")
+              app_text = app_text.replace(marker, marker + "\n" + apply_line, 1)
+              app.write_text(app_text)
+
+          print("Firebase Gradle plugin configured.")
+          PY
 
       - name: Install dependencies
         run: flutter pub get
