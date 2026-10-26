@@ -41,6 +41,12 @@ class LovelyApp extends StatelessWidget {
 class LovelyLoginScreen extends StatelessWidget {
   const LovelyLoginScreen({super.key});
 
+  void _showMessage(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -56,38 +62,87 @@ class LovelyLoginScreen extends StatelessWidget {
                   filterQuality: FilterQuality.high,
                 ),
                 Positioned(
-                  left: constraints.maxWidth * 0.22,
-                  right: constraints.maxWidth * 0.22,
-                  bottom: constraints.maxHeight * 0.035,
-                  height: 46,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const LovelyIdLoginPage(),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF42BCEB),
-                      foregroundColor: Colors.white,
-                      elevation: 8,
-                      shadowColor: Colors.blue.withValues(alpha: 0.4),
-                      shape: const StadiumBorder(
-                        side: BorderSide(
-                          color: Colors.white,
-                          width: 1.5,
+                  left: constraints.maxWidth * 0.12,
+                  right: constraints.maxWidth * 0.12,
+                  bottom: constraints.maxHeight * 0.025,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _showMessage(
+                            context,
+                            'Google Login ki authentication abhi connect nahi hai.',
+                          ),
+                          icon: const Icon(Icons.g_mobiledata, size: 28),
+                          label: const Text('Google Login'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF333333),
+                            elevation: 5,
+                            shape: const StadiumBorder(
+                              side: BorderSide(
+                                color: Color(0xFF42BCEB),
+                                width: 1.5,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                    child: const Text(
-                      'Lovely ID',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1,
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _showMessage(
+                            context,
+                            'Phone Login ke liye Firebase Phone Auth setup zaroori hai.',
+                          ),
+                          icon: const Icon(Icons.phone_android),
+                          label: const Text('Login by tel'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF168FC5),
+                            foregroundColor: Colors.white,
+                            elevation: 5,
+                            shape: const StadiumBorder(
+                              side: BorderSide(
+                                color: Colors.white,
+                                width: 1.2,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 46,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const LovelyIdLoginPage(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.favorite_rounded),
+                          label: const Text('Lovely Login'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF42BCEB),
+                            foregroundColor: Colors.white,
+                            elevation: 8,
+                            shape: const StadiumBorder(
+                              side: BorderSide(
+                                color: Colors.white,
+                                width: 1.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
