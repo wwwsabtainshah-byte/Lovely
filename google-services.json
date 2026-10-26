@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "706517004628",
+    "project_id": "lovely-chat-fe0a1",
+    "storage_bucket": "lovely-chat-fe0a1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:706517004628:android:95ae15a6ba3e12178598c1",
+        "android_client_info": {
+          "package_name": "com.lovelychat.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDfWbpq6YF43FkBJA57Ylsw8U5B2UtWerY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
