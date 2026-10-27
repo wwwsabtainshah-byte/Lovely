@@ -292,80 +292,174 @@ class _LovelyLoginPageState extends State<LovelyLoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Lovely Chat'),
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.favorite, size: 65, color: Colors.pink),
-              const SizedBox(height: 20),
-              Text(
-                register ? 'Create Account' : 'Welcome Back',
-                style: const TextStyle(
-                  fontSize: 25,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 24),
-              TextField(
-                controller: username,
-                decoration: const InputDecoration(
-                  labelText: 'Username',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 15),
-              TextField(
-                controller: password,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: busy ? null : submit,
-                child: Text(
-                  busy
-                      ? 'Please wait...'
-                      : register ? 'Register' : 'Login',
-                ),
-              ),
-              if (!register) ...[
+      backgroundColor: const Color(0xFFF3FAFF),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 20),
+                const Icon(Icons.favorite_rounded,
+                    size: 78, color: Color(0xFF39A9F9)),
                 const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: busy ? null : googleLogin,
-                  icon: const Icon(Icons.g_mobiledata, size: 30),
-                  label: const Text('Continue with Google'),
-                ),
-              ],
-              TextButton(
-                onPressed: busy
-                    ? null
-                    : () => setState(() {
-                          register = !register;
-                          message = '';
-                        }),
-                child: Text(
-                  register
-                      ? 'Already registered? Login'
-                      : 'Create new account',
-                ),
-              ),
-              if (message.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Text(
-                    message,
-                    textAlign: TextAlign.center,
+                const Text(
+                  'Lovely Chat',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFF168DE0),
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-            ],
+                const SizedBox(height: 8),
+                const Text(
+                  'Connect with the people you love',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.blueGrey, fontSize: 15),
+                ),
+                const SizedBox(height: 32),
+                OutlinedButton.icon(
+                  onPressed: busy
+                      ? null
+                      : () => setState(() {
+                            message = 'Phone login is not configured yet.';
+                          }),
+                  icon: const Icon(Icons.phone_android),
+                  label: const Text('Login by Phone'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF168DE0),
+                    side: const BorderSide(color: Color(0xFF8CCFFF)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 22),
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: const Color(0xFFD9EEFF)),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x1439A9F9),
+                        blurRadius: 22,
+                        offset: Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Lovely Login',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFF168DE0),
+                          fontSize: 23,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: username,
+                        decoration: InputDecoration(
+                          labelText: 'Lovely ID',
+                          prefixIcon: const Icon(Icons.person_outline),
+                          filled: true,
+                          fillColor: const Color(0xFFF5FAFF),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(13),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: password,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          filled: true,
+                          fillColor: const Color(0xFFF5FAFF),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(13),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      SizedBox(
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: busy ? null : submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF299FEF),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(13),
+                            ),
+                          ),
+                          child: Text(
+                            busy
+                                ? 'Please wait...'
+                                : register
+                                    ? 'Create Account'
+                                    : 'Confirm & Login',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (!register)
+                        OutlinedButton.icon(
+                          onPressed: busy ? null : googleLogin,
+                          icon: const Icon(Icons.g_mobiledata, size: 30),
+                          label: const Text('Login with Google'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF168DE0),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      TextButton(
+                        onPressed: busy
+                            ? null
+                            : () => setState(() {
+                                  register = !register;
+                                  message = '';
+                                }),
+                        child: Text(
+                          register
+                              ? 'Already have an account? Login'
+                              : 'Create a new account',
+                        ),
+                      ),
+                      if (message.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            message,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.redAccent),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
+                const Text(
+                  'Lovely Chat • Made with love',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.blueGrey, fontSize: 12),
+                ),
+              ],
+            ),
           ),
         ),
       ),
