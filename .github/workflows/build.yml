@@ -5,6 +5,7 @@ on:
     branches:
       - main
   workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -39,21 +40,30 @@ jobs:
           p = Path("android/app/build.gradle")
           if p.exists():
               s = p.read_text()
-              s = s.replace("applicationId \"com.example.lovely_chat\"", "applicationId \"com.lovelychat.app\"")
+              s = s.replace(
+                  'applicationId "com.example.lovely_chat"',
+                  'applicationId "com.lovelychat.app"'
+              )
               p.write_text(s)
 
           p = Path("android/app/build.gradle.kts")
           if p.exists():
               s = p.read_text()
-              s = s.replace('applicationId = "com.example.lovely_chat"', 'applicationId = "com.lovelychat.app"')
+              s = s.replace(
+                  'applicationId = "com.example.lovely_chat"',
+                  'applicationId = "com.lovelychat.app"'
+              )
               p.write_text(s)
 
           raw = os.environ.get("FIREBASE_GOOGLE_SERVICES_JSON", "")
           if not raw:
-              raise SystemExit("Missing FIREBASE_GOOGLE_SERVICES_JSON repository secret")
+              raise SystemExit(
+                  "Missing FIREBASE_GOOGLE_SERVICES_JSON repository secret"
+              )
 
           data = json.loads(raw)
           package = data["client"][0]["client_info"]["android_client_info"]["package_name"]
+
           if package != "com.lovelychat.app":
               raise SystemExit(f"Firebase package mismatch: {package}")
 
@@ -69,24 +79,45 @@ jobs:
           p = Path("android/settings.gradle")
           if not p.exists():
               p = Path("android/settings.gradle.kts")
+
           s = p.read_text()
 
           if "com.google.gms.google-services" not in s:
               if p.suffix == ".kts":
-                  s = s.replace("plugins {", 'plugins {\n    id("com.google.gms.google-services") version "4.4.2" apply false', 1)
+                  s = s.replace(
+                      "plugins {",
+                      'plugins {\n    id("com.google.gms.google-services") version "4.4.2" apply false',
+                      1
+                  )
               else:
-                  s = s.replace("plugins {", "plugins {\n    id 'com.google.gms.google-services' version '4.4.2' apply false", 1)
+                  s = s.replace(
+                      "plugins {",
+                      "plugins {\n    id 'com.google.gms.google-services' version '4.4.2' apply false",
+                      1
+                  )
               p.write_text(s)
 
-          for name in ("android/app/build.gradle", "android/app/build.gradle.kts"):
+          for name in (
+              "android/app/build.gradle",
+              "android/app/build.gradle.kts"
+          ):
               p = Path(name)
               if p.exists():
                   s = p.read_text()
+
                   if "com.google.gms.google-services" not in s:
                       if p.suffix == ".kts":
-                          s = s.replace("plugins {", 'plugins {\n    id("com.google.gms.google-services")', 1)
+                          s = s.replace(
+                              "plugins {",
+                              'plugins {\n    id("com.google.gms.google-services")',
+                              1
+                          )
                       else:
-                          s = s.replace("plugins {", "plugins {\n    id 'com.google.gms.google-services'", 1)
+                          s = s.replace(
+                              "plugins {",
+                              "plugins {\n    id 'com.google.gms.google-services'",
+                              1
+                          )
                       p.write_text(s)
                   break
           PY
@@ -98,15 +129,30 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          p = Path('android/app/src/main/AndroidManifest.xml')
+
+          p = Path("android/app/src/main/AndroidManifest.xml")
+
           if not p.exists():
-              raise SystemExit('AndroidManifest.xml missing; listing android/app files:')
+              raise SystemExit(
+                  "AndroidManifest.xml missing; listing android/app files:"
+              )
+
           s = p.read_text()
-          if 'android.permission.INTERNET' not in s:
-              s = s.replace('<manifest', '<manifest', 1)
-              s = s.replace('<application', '<uses-permission android:name="android.permission.INTERNET"/>\n    <application', 1)
-          if 'android:usesCleartextTraffic=' not in s:
-              s = s.replace('<application', '<application android:usesCleartextTraffic="true"', 1)
+
+          if "android.permission.INTERNET" not in s:
+              s = s.replace(
+                  "<application",
+                  '<uses-permission android:name="android.permission.INTERNET"/>\n    <application',
+                  1
+              )
+
+          if "android:usesCleartextTraffic=" not in s:
+              s = s.replace(
+                  "<application",
+                  '<application android:usesCleartextTraffic="true"',
+                  1
+              )
+
           p.write_text(s)
           PY
 
@@ -115,13 +161,16 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import re
-          cache = Path.home() / '.pub-cache/hosted/pub.dev'
-          matches = list(cache.glob('flutter_webrtc-*/android/build.gradle'))
+
+          cache = Path.home() / ".pub-cache/hosted/pub.dev"
+          matches = list(cache.glob("flutter_webrtc-*/android/build.gradle"))
+
           for p in matches:
               s = p.read_text()
-              s = re.sub(r'compileSdkVersion\s+31\b', 'compileSdkVersion 35', s)
-              s = re.sub(r'compileSdk\s+31\b', 'compileSdk 35', s)
+              s = re.sub(r"compileSdkVersion\s+31\b", "compileSdkVersion 35", s)
+              s = re.sub(r"compileSdk\s+31\b", "compileSdk 35", s)
               p.write_text(s)
+
           print("WebRTC SDK compatibility check complete.")
           PY
 
@@ -132,9 +181,59 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          set -e
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/lovely-release.jks
+          set -euo pipefail
+
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "ERROR: ANDROID_KEYSTORE_BASE64 secret is missing."
+            exit 1
+          fi
+
+          if [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ]; then
+            echo "ERROR: Android signing secrets are incomplete."
+            exit 1
+          fi
+
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" |
+            base64 --decode > android/app/lovely-release.jks
+
+          test -s android/app/lovely-release.jks
+
           python3 .github/workflows/configure_signing.py
+
+      - name: Verify permanent release key
+        env:
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          EXPECTED_FINGERPRINT="92FBB083DC5BEC6A17A83A30D02A3453DD7548D1B45ADE7B478CB74B252C0961"
+
+          test -s android/app/lovely-release.jks
+
+          KEY_INFO="$(keytool -list -v \
+            -keystore android/app/lovely-release.jks \
+            -alias "$ANDROID_KEY_ALIAS" \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD")"
+
+          ACTUAL_FINGERPRINT="$(printf '%s\n' "$KEY_INFO" |
+            awk -F': ' '/SHA256:/{gsub(/:/, "", $2); print toupper($2); exit}')"
+
+          if [ -z "$ACTUAL_FINGERPRINT" ]; then
+            echo "ERROR: Could not read signing certificate fingerprint."
+            exit 1
+          fi
+
+          echo "Expected signing fingerprint: $EXPECTED_FINGERPRINT"
+          echo "Actual signing fingerprint:   $ACTUAL_FINGERPRINT"
+
+          if [ "$ACTUAL_FINGERPRINT" != "$EXPECTED_FINGERPRINT" ]; then
+            echo "ERROR: Signing key does not match working APK #93."
+            echo "Build stopped to protect app update compatibility."
+            exit 1
+          fi
+
+          echo "SUCCESS: Permanent signing key matches APK #93."
 
       - name: Build APK
         env:
