@@ -291,174 +291,293 @@ class _LovelyLoginPageState extends State<LovelyLoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    const neonPurple = Color(0xFF9B6DFF);
+    const neonPink = Color(0xFFFF65BD);
+    const darkBackground = Color(0xFF0C061F);
+    const cardBackground = Color(0xFF1B113A);
+
+    final fieldBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(15),
+      borderSide: BorderSide(color: neonPurple.withOpacity(0.45)),
+    );
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF3FAFF),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 20),
-                const Icon(Icons.favorite_rounded,
-                    size: 78, color: Color(0xFF39A9F9)),
-                const SizedBox(height: 12),
-                const Text(
-                  'Lovely Chat',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xFF168DE0),
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Connect with the people you love',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.blueGrey, fontSize: 15),
-                ),
-                const SizedBox(height: 32),
-                OutlinedButton.icon(
-                  onPressed: busy
-                      ? null
-                      : () => setState(() {
-                            message = 'Phone login is not configured yet.';
-                          }),
-                  icon: const Icon(Icons.phone_android),
-                  label: const Text('Login by Phone'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF168DE0),
-                    side: const BorderSide(color: Color(0xFF8CCFFF)),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+      backgroundColor: darkBackground,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF16082F),
+              Color(0xFF0C061F),
+              Color(0xFF230B35),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(22, 28, 22, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    width: 100,
+                    height: 100,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [neonPurple, neonPink],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: neonPink.withOpacity(0.32),
+                          blurRadius: 32,
+                          spreadRadius: 3,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.favorite_rounded,
+                      size: 53,
+                      color: Colors.white,
                     ),
                   ),
-                ),
-                const SizedBox(height: 22),
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: const Color(0xFFD9EEFF)),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x1439A9F9),
-                        blurRadius: 22,
-                        offset: Offset(0, 8),
-                      ),
-                    ],
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Lovely Chat',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 35,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                      color: Colors.white,
+                    ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Text(
-                        'Lovely Login',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color(0xFF168DE0),
-                          fontSize: 23,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Connect with the people you love',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFFD4BDFE),
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  OutlinedButton.icon(
+                    onPressed: busy
+                        ? null
+                        : () => setState(() {
+                              message = 'Phone login is not configured yet.';
+                            }),
+                    icon: const Icon(Icons.phone_android_rounded),
+                    label: const Text('Login by Phone'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: neonPink,
+                      side: const BorderSide(color: neonPink, width: 1.2),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      const SizedBox(height: 20),
-                      TextField(
-                        controller: username,
-                        decoration: InputDecoration(
-                          labelText: 'Lovely ID',
-                          prefixIcon: const Icon(Icons.person_outline),
-                          filled: true,
-                          fillColor: const Color(0xFFF5FAFF),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(13),
-                          ),
-                        ),
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  Container(
+                    padding: const EdgeInsets.all(22),
+                    decoration: BoxDecoration(
+                      color: cardBackground.withOpacity(0.96),
+                      borderRadius: BorderRadius.circular(26),
+                      border: Border.all(
+                        color: neonPurple.withOpacity(0.65),
+                        width: 1.1,
                       ),
-                      const SizedBox(height: 14),
-                      TextField(
-                        controller: password,
-                        obscureText: true,
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          prefixIcon: const Icon(Icons.lock_outline),
-                          filled: true,
-                          fillColor: const Color(0xFFF5FAFF),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(13),
+                      boxShadow: [
+                        BoxShadow(
+                          color: neonPurple.withOpacity(0.13),
+                          blurRadius: 28,
+                          spreadRadius: 1,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text(
+                          'Lovely Login',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: neonPink,
+                            fontSize: 25,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 18),
-                      SizedBox(
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: busy ? null : submit,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF299FEF),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(13),
-                            ),
-                          ),
-                          child: Text(
-                            busy
-                                ? 'Please wait...'
-                                : register
-                                    ? 'Create Account'
-                                    : 'Confirm & Login',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      if (!register)
-                        OutlinedButton.icon(
-                          onPressed: busy ? null : googleLogin,
-                          icon: const Icon(Icons.g_mobiledata, size: 30),
-                          label: const Text('Login with Google'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF168DE0),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      TextButton(
-                        onPressed: busy
-                            ? null
-                            : () => setState(() {
-                                  register = !register;
-                                  message = '';
-                                }),
-                        child: Text(
+                        const SizedBox(height: 7),
+                        Text(
                           register
-                              ? 'Already have an account? Login'
-                              : 'Create a new account',
-                        ),
-                      ),
-                      if (message.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            message,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.redAccent),
+                              ? 'Create your Lovely account'
+                              : 'Welcome back to Lovely',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Color(0xFFC9B8E8),
+                            fontSize: 13,
                           ),
                         ),
-                    ],
+                        const SizedBox(height: 24),
+                        TextField(
+                          controller: username,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            labelText: 'Lovely ID',
+                            labelStyle: const TextStyle(
+                              color: Color(0xFFD4BDFE),
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.person_outline_rounded,
+                              color: neonPurple,
+                            ),
+                            filled: true,
+                            fillColor: darkBackground,
+                            enabledBorder: fieldBorder,
+                            focusedBorder: fieldBorder.copyWith(
+                              borderSide: const BorderSide(
+                                color: neonPink,
+                                width: 1.6,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: password,
+                          obscureText: true,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            labelText: 'Password',
+                            labelStyle: const TextStyle(
+                              color: Color(0xFFD4BDFE),
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.lock_outline_rounded,
+                              color: neonPurple,
+                            ),
+                            filled: true,
+                            fillColor: darkBackground,
+                            enabledBorder: fieldBorder,
+                            focusedBorder: fieldBorder.copyWith(
+                              borderSide: const BorderSide(
+                                color: neonPink,
+                                width: 1.6,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        SizedBox(
+                          height: 53,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [neonPurple, neonPink],
+                              ),
+                              borderRadius: BorderRadius.circular(15),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: neonPink.withOpacity(0.2),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
+                            ),
+                            child: ElevatedButton(
+                              onPressed: busy ? null : submit,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                disabledBackgroundColor:
+                                    Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
+                              ),
+                              child: Text(
+                                busy
+                                    ? 'Please wait...'
+                                    : register
+                                        ? 'Create Account'
+                                        : 'Confirm & Login',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (!register) ...[
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            onPressed: busy ? null : googleLogin,
+                            icon: const Icon(
+                              Icons.g_mobiledata_rounded,
+                              size: 30,
+                            ),
+                            label: const Text('Login with Google'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              side: BorderSide(
+                                color: neonPurple.withOpacity(0.65),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                          ),
+                        ],
+                        TextButton(
+                          onPressed: busy
+                              ? null
+                              : () => setState(() {
+                                    register = !register;
+                                    message = '';
+                                  }),
+                          child: Text(
+                            register
+                                ? 'Already have an account? Login'
+                                : 'Create a new account',
+                            style: const TextStyle(color: neonPink),
+                          ),
+                        ),
+                        if (message.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              message,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Color(0xFFFF8DA8),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 22),
-                const Text(
-                  'Lovely Chat • Made with love',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.blueGrey, fontSize: 12),
-                ),
-              ],
+                  const SizedBox(height: 24),
+                  const Text(
+                    'LOVELY CHAT  •  MADE WITH LOVE',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFF9C8BB9),
+                      fontSize: 11,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -492,14 +611,41 @@ class _MainScreenState extends State<MainScreen> {
         index: index,
         children: pages,
       ),
-      bottomNavigationBar: NavigationBar(
-        backgroundColor: panel,
-        indicatorColor: purple.withValues(alpha: 0.25),
-        selectedIndex: index,
-        onDestinationSelected: (value) {
-          setState(() => index = value);
-        },
-        destinations: const [
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF120923),
+          border: Border(
+            top: BorderSide(color: pink.withOpacity(0.35), width: 1),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: pink.withOpacity(0.08),
+              blurRadius: 18,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: NavigationBar(
+          height: 76,
+          backgroundColor: Colors.transparent,
+          indicatorColor: purple.withOpacity(0.24),
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          labelTextStyle: WidgetStateProperty.resolveWith<TextStyle?>(
+            (states) => TextStyle(
+              fontSize: 11,
+              fontWeight: states.contains(WidgetState.selected)
+                  ? FontWeight.bold
+                  : FontWeight.normal,
+              color: states.contains(WidgetState.selected)
+                  ? pink
+                  : const Color(0xFFB9A8D2),
+            ),
+          ),
+          selectedIndex: index,
+          onDestinationSelected: (value) {
+            setState(() => index = value);
+          },
+          destinations: const [
           NavigationDestination(
             icon: Icon(Icons.live_tv_outlined),
             selectedIcon: Icon(Icons.live_tv),
@@ -813,6 +959,16 @@ class _VideoRoomsPageState extends State<VideoRoomsPage> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: panel,
+        titleTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+        contentTextStyle: const TextStyle(
+          color: Colors.white70,
+          fontSize: 15,
+        ),
         title: Text(title),
         content: Text(message),
         actions: [
@@ -861,6 +1017,10 @@ class _VideoRoomsPageState extends State<VideoRoomsPage> {
 
     await showModalBottomSheet<void>(
       context: context,
+      backgroundColor: panel,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       isScrollControlled: true,
       builder: (sheet) => StatefulBuilder(
         builder: (sheet, refresh) {
@@ -942,7 +1102,11 @@ class _VideoRoomsPageState extends State<VideoRoomsPage> {
           final results = _clips.asMap().entries.where((e) =>
             '${e.value['name']} ${e.value['caption']}'.toLowerCase().contains(query.toLowerCase())).toList();
           return AlertDialog(
-            title: const Text('Search Lovely'),
+            backgroundColor: panel,
+            title: const Text(
+              'Search Lovely',
+              style: TextStyle(color: Colors.white),
+            ),
             content: SizedBox(width: double.maxFinite, child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -991,6 +1155,10 @@ class _VideoRoomsPageState extends State<VideoRoomsPage> {
       }
       showModalBottomSheet<void>(
         context: context,
+        backgroundColor: panel,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
         builder: (sheet) => ListView(shrinkWrap: true, children: [
           const ListTile(title: Text('Lovely Gift Store')),
           ...items.map<Widget>((raw) {
@@ -1273,7 +1441,7 @@ class _VideoRoomsPageState extends State<VideoRoomsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: bg,
       body: PageView.builder(
         controller: _pageController,
         scrollDirection: Axis.vertical,
@@ -1361,7 +1529,15 @@ class _VoiceRoomsPageState extends State<VoiceRoomsPage> {
     final name = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Create Voice Room'),
+        backgroundColor: panel,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: Color(0xFF9B6DFF), width: 1),
+        ),
+        title: const Text(
+          'Create Voice Room',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         content: TextField(
           controller: controller,
           maxLength: 40,
@@ -1459,8 +1635,15 @@ class _VoiceRoomsPageState extends State<VoiceRoomsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: bg,
       appBar: AppBar(
-        title: const Text('Voice Rooms 🎙️'),
+        backgroundColor: bg,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'Voice Rooms 🎙️',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
             onPressed: _loadRooms,
@@ -1513,13 +1696,62 @@ class _VoiceRoomsPageState extends State<VoiceRoomsPage> {
                         itemBuilder: (context, index) {
                           final room = _rooms[index];
                           return Card(
-                            child: ListTile(
-                              leading: const CircleAvatar(
-                                child: Icon(Icons.mic, color: Colors.amber),
+                            color: panel,
+                            elevation: 5,
+                            margin: const EdgeInsets.symmetric(vertical: 7),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              side: const BorderSide(
+                                color: Color(0xFF7045B8),
+                                width: 1,
                               ),
-                              title: Text(room['name'].toString()),
-                              subtitle: Text('Host: ${room['host']}  •  Room #${room['room_id']}'),
-                              trailing: const Icon(Icons.chevron_right),
+                            ),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              leading: Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFFFF65BD),
+                                      Color(0xFF9B6DFF),
+                                    ],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFFFF65BD)
+                                          .withOpacity(0.22),
+                                      blurRadius: 12,
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.mic,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              title: Text(
+                                room['name'].toString(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: Text(
+                                'Host: ${room['host']}  •  Room #${room['room_id']}',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                ),
+                              ),
+                              trailing: const Icon(
+                                Icons.chevron_right,
+                                color: Color(0xFFFF65BD),
+                              ),
                               onTap: () => _openRoom(room),
                             ),
                           );
@@ -2423,35 +2655,164 @@ class MomentPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Moment')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              Text('Latest'),
-              Text('Hot'),
-              Text('Following'),
-            ],
-          ),
-          const SizedBox(height: 24),
-          featureCard(
-            Icons.add_a_photo_outlined,
-            'Create a Moment',
-            'Share a photo or video',
-            () => showInfo(
+      backgroundColor: bg,
+      appBar: AppBar(
+        backgroundColor: bg,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'Lovely Moments ✨',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          IconButton(
+            onPressed: () => showInfo(
               context,
-              'Create Moment',
-              'پوسٹ اپ لوڈ کرنے کے لیے '
-                  'تصویری storage اور backend شامل کرنا ہوگا۔',
+              'Moments',
+              'Yahan aap Lovely friends ke moments dekh sakenge.',
+            ),
+            icon: const Icon(Icons.notifications_none_rounded),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: panel,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFF7045B8)),
+            ),
+            child: const Row(
+              children: [
+                Expanded(child: _MomentTab(label: 'Latest', selected: true)),
+                Expanded(child: _MomentTab(label: 'Hot')),
+                Expanded(child: _MomentTab(label: 'Following')),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
-          const Center(
-            child: Text(
-              'Your feed will appear here',
-              style: TextStyle(color: Colors.white60),
+          const SizedBox(height: 22),
+          InkWell(
+            borderRadius: BorderRadius.circular(24),
+            onTap: () => showInfo(
+              context,
+              'Create Moment',
+              'پوسٹ اپ لوڈ کرنے کے لیے تصویری storage اور backend شامل کرنا ہوگا۔',
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF382060),
+                    Color(0xFF21133F),
+                    Color(0xFF171027),
+                  ],
+                ),
+                border: Border.all(
+                  color: const Color(0xFFFF65BD),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFF65BD).withOpacity(0.13),
+                    blurRadius: 20,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: const Row(
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [
+                          Color(0xFFFF65BD),
+                          Color(0xFF9B6DFF),
+                        ],
+                      ),
+                    ),
+                    child: SizedBox(
+                      width: 62,
+                      height: 62,
+                      child: Icon(
+                        Icons.add_a_photo_outlined,
+                        size: 30,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Create a Moment',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          'Share a photo or video 💜',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: Color(0xFFFF65BD),
+                    size: 19,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 28),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 30,
+            ),
+            decoration: BoxDecoration(
+              color: panel.withOpacity(0.65),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0x337C4DFF)),
+            ),
+            child: const Column(
+              children: [
+                Icon(
+                  Icons.auto_awesome,
+                  size: 42,
+                  color: Color(0xFFFF65BD),
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'Your feed will appear here',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'Lovely moments, beautiful memories.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white60),
+                ),
+              ],
             ),
           ),
         ],
@@ -2460,6 +2821,39 @@ class MomentPage extends StatelessWidget {
   }
 }
 
+class _MomentTab extends StatelessWidget {
+  final String label;
+  final bool selected;
+
+  const _MomentTab({
+    required this.label,
+    this.selected = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        gradient: selected
+            ? const LinearGradient(
+                colors: [Color(0xFFFF65BD), Color(0xFF9B6DFF)],
+              )
+            : null,
+      ),
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+          fontSize: 13,
+        ),
+      ),
+    );
+  }
+}
 // ---------------- CHAT ----------------
 
 class ChatPage extends StatefulWidget {
@@ -2544,76 +2938,213 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: bg,
       appBar: AppBar(
-        title: const Text('Lovely Chat 💗'),
+        backgroundColor: bg,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'Lovely Chat 💗',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         actions: [
           IconButton(
             onPressed: _connect,
-            icon: const Icon(Icons.wifi),
+            icon: const Icon(Icons.wifi_rounded, color: pink),
             tooltip: 'Connect',
           ),
         ],
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Text(_status),
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(12, 4, 12, 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: panel,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: purple.withOpacity(0.55)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _channel == null ? Icons.wifi_off_rounded : Icons.wifi_rounded,
+                  color: pink,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _status,
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             child: TextField(
               onChanged: (value) => _recipient = value,
-              decoration: const InputDecoration(
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
                 labelText: 'Recipient username',
-                border: OutlineInputBorder(),
+                labelStyle: const TextStyle(color: Colors.white70),
+                prefixIcon: const Icon(Icons.person_outline, color: pink),
+                filled: true,
+                fillColor: panel,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 14,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(color: purple.withOpacity(0.55)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: pink, width: 1.5),
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                return Align(
-                  alignment: message['mine'] == '1'
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: message['mine'] == '1'
-                          ? Colors.pink.shade100
-                          : Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(14),
+            child: _messages.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: panel,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: purple.withOpacity(0.6),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.favorite_rounded,
+                            size: 38,
+                            color: pink,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        const Text(
+                          'Your lovely conversation starts here',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Send a message to say hello 💗',
+                          style: TextStyle(
+                            color: Colors.white38,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
-                    child: Text(message['text'] ?? ''),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
+                      final message = _messages[index];
+                      final mine = message['mine'] == '1';
+                      return Align(
+                        alignment: mine
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: Container(
+                          constraints: BoxConstraints(
+                            maxWidth: MediaQuery.of(context).size.width * 0.78,
+                          ),
+                          margin: const EdgeInsets.symmetric(vertical: 5),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 15,
+                            vertical: 11,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: mine
+                                ? const LinearGradient(
+                                    colors: [purple, pink],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  )
+                                : null,
+                            color: mine ? null : panel,
+                            border: Border.all(
+                              color: mine
+                                  ? pink.withOpacity(0.6)
+                                  : purple.withOpacity(0.5),
+                            ),
+                            borderRadius: BorderRadius.only(
+                              topLeft: const Radius.circular(17),
+                              topRight: const Radius.circular(17),
+                              bottomLeft: Radius.circular(mine ? 17 : 4),
+                              bottomRight: Radius.circular(mine ? 4 : 17),
+                            ),
+                          ),
+                          child: Text(
+                            message['text'] ?? '',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(10),
+            top: false,
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(10, 6, 10, 10),
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: panel,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: purple.withOpacity(0.6)),
+              ),
               child: Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: _controller,
-                      decoration: const InputDecoration(
-                        hintText: 'Message...',
-                        border: OutlineInputBorder(),
-                      ),
+                      style: const TextStyle(color: Colors.white),
+                      textInputAction: TextInputAction.send,
                       onSubmitted: (_) => _send(),
+                      decoration: const InputDecoration(
+                        hintText: 'Write a lovely message...',
+                        hintStyle: TextStyle(color: Colors.white54),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                      ),
                     ),
                   ),
-                  IconButton(
-                    onPressed: _send,
-                    icon: const Icon(Icons.send),
+                  Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(colors: [purple, pink]),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      onPressed: _send,
+                      tooltip: 'Send message',
+                      icon: const Icon(
+                        Icons.send_rounded,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -2811,15 +3342,19 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: bg,
       appBar: AppBar(
+        backgroundColor: bg,
+        foregroundColor: Colors.white,
+        elevation: 0,
         title: const Text(
-          'My Profile',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          'My Profile 💗',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
             tooltip: 'Settings',
-            icon: const Icon(Icons.settings_outlined),
+            icon: const Icon(Icons.settings_outlined, color: pink),
             onPressed: () => showInfo(
               context,
               'Settings',
@@ -2829,7 +3364,7 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
           Container(
             padding: const EdgeInsets.all(22),
@@ -3218,13 +3753,13 @@ Widget featureCard(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Color(0xFF402078),
+          Color(0xFF35165E),
           Color(0xFF21113F),
           Color(0xFF160D2B),
         ],
       ),
       borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: const Color(0xFFB78AFF), width: 1.1),
+      border: Border.all(color: const Color(0xFFFF65BD), width: 1.1),
       boxShadow: const [
         BoxShadow(
           color: Color(0x663F16A5),
