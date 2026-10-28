@@ -1,12 +1,18 @@
 name: Build Lovely Chat APK
 
 on:
+  push:
   workflow_dispatch:
+
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout source
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Java
@@ -18,72 +24,229 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.47.8'
           channel: stable
           cache: true
 
       - name: Generate Android project
-        run: flutter create --platforms=android .
+        run: flutter create --platforms=android --org com.lovelychat .
+
+      - name: Configure Android package and Firebase
+        env:
+          FIREBASE_GOOGLE_SERVICES_JSON: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON }}
+        run: |
+          python3 - <<'PY_CONFIG'
+          import os, json, base64, re
+          from pathlib import Path
+
+          raw = os.environ.get("FIREBASE_GOOGLE_SERVICES_JSON", "").strip()
+          if not raw:
+              raise SystemExit("ERROR: Firebase secret is empty.")
+          if not raw.startswith("{"):
+              try:
+                  raw = base64.b64decode(raw).decode("utf-8")
+              except Exception as e:
+                  raise SystemExit("ERROR: Firebase secret is not valid JSON/base64.") from e
+
+          try:
+              data = json.loads(raw)
+          except Exception as e:
+              raise SystemExit("ERROR: Invalid Firebase JSON.") from e
+
+          clients = data.get("client", [])
+          if not any(
+              c.get("client_info", {}).get("android_client_info", {}).get("package_name")
+              == "com.lovelychat.app"
+              for c in clients
+          ):
+              raise SystemExit("ERROR: Firebase JSON has no Android client for com.lovelychat.app.")
+
+          Path("android/app/google-services.json").write_text(
+              json.dumps(data, indent=2) + "\n"
+          )
+
+          settings = next(
+              (Path(x) for x in ("android/settings.gradle.kts", "android/settings.gradle")
+               if Path(x).exists()), None
+          )
+          app = next(
+              (Path(x) for x in ("android/app/build.gradle.kts", "android/app/build.gradle")
+               if Path(x).exists()), None
+          )
+          if not settings or not app:
+              raise SystemExit("ERROR: Android Gradle files not found.")
+
+          st = settings.read_text()
+          if "com.google.gms.google-services" not in st:
+              m = re.search(r"(?m)^plugins\s*\{", st)
+              if not m:
+                  raise SystemExit("ERROR: Settings plugins block not found.")
+              plugin = (
+                  '    id("com.google.gms.google-services") version "4.4.2" apply false'
+                  if settings.suffix == ".kts"
+                  else '    id "com.google.gms.google-services" version "4.4.2" apply false'
+              )
+              st = st[:m.end()] + "\n" + plugin + st[m.end():]
+              settings.write_text(st)
+
+          ap = app.read_text()
+          if "com.google.gms.google-services" not in ap:
+              m = re.search(r"(?m)^plugins\s*\{", ap)
+              if not m:
+                  raise SystemExit("ERROR: App plugins block not found.")
+              plugin = (
+                  '    id("com.google.gms.google-services")'
+                  if app.suffix == ".kts"
+                  else "    id 'com.google.gms.google-services'"
+              )
+              ap = ap[:m.end()] + "\n" + plugin + ap[m.end():]
+
+          for key in ("namespace", "applicationId"):
+              pattern = rf'(?m)^(\s*{key}\s*(?:=\s*)?)["\'][^"\']+["\']'
+              ap, count = re.subn(
+                  pattern, lambda m: m.group(1) + '"com.lovelychat.app"', ap, count=1
+              )
+              if count != 1:
+                  raise SystemExit(f"ERROR: Cannot set {key} to com.lovelychat.app.")
+
+          app.write_text(ap)
+          print("SUCCESS: Firebase and Android package configured.")
+          PY_CONFIG
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Enable local backend HTTP
+      - name: Enable Android network access
         run: |
-          python3 - <<'PYMANIFEST'
+          python3 - <<'PY_MANIFEST'
           from pathlib import Path
-          p = Path('android/app/src/main/AndroidManifest.xml')
+          p = Path("android/app/src/main/AndroidManifest.xml")
           s = p.read_text()
-          if 'android.permission.INTERNET' not in s:
+          if "android.permission.INTERNET" not in s:
               s = s.replace(
-                  '<manifest',
-                  '<manifest xmlns:tools="http://schemas.android.com/tools"',
-                  1
-              ) if 'xmlns:tools=' not in s else s
-              s = s.replace(
-                  '<application',
+                  "<application",
                   '<uses-permission android:name="android.permission.INTERNET"/>\n    <application',
                   1
               )
-          if 'android:usesCleartextTraffic=' not in s:
+          if "android:usesCleartextTraffic=" not in s:
               s = s.replace(
-                  '<application',
+                  "<application",
                   '<application android:usesCleartextTraffic="true"',
                   1
               )
           p.write_text(s)
-          PYMANIFEST
+          print("SUCCESS: Android network permission configured.")
+          PY_MANIFEST
 
       - name: Fix WebRTC Android compile SDK
         run: |
-          python3 - <<'PYFIX'
+          python3 - <<'PY_WEBRTC'
           from pathlib import Path
           import re
 
-          cache = Path.home() / '.pub-cache/hosted/pub.dev'
-          matches = list(cache.glob('flutter_webrtc-*/android/build.gradle'))
-
+          cache = Path.home() / ".pub-cache/hosted/pub.dev"
+          matches = list(cache.glob("flutter_webrtc-*/android/build.gradle"))
           if not matches:
-              raise SystemExit('WebRTC Gradle file not found')
+              raise SystemExit("ERROR: flutter_webrtc Gradle file not found.")
 
           for p in matches:
               s = p.read_text()
-              updated = re.sub(
-                  r'compileSdkVersion\s+31\b',
-                  'compileSdkVersion 35',
-                  s
-              )
-              updated = re.sub(
-                  r'compileSdk\s+31\b',
-                  'compileSdk 35',
-                  updated
-              )
+              s = re.sub(r"compileSdkVersion\s+31\b", "compileSdkVersion 35", s)
+              s = re.sub(r"compileSdk\s+31\b", "compileSdk 35", s)
+              p.write_text(s)
+          print("SUCCESS: WebRTC SDK compatibility checked.")
+          PY_WEBRTC
 
-              if updated == s:
-                  print('No SDK 31 setting found:', p)
-              else:
-                  p.write_text(updated)
-                  print('Updated:', p)
-          PYFIX
+      - name: Configure release signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -e
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          test -n "$ANDROID_KEYSTORE_PASSWORD"
+          test -n "$ANDROID_KEY_ALIAS"
+          test -n "$ANDROID_KEY_PASSWORD"
+
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/lovely-release.jks
+          test -s android/app/lovely-release.jks
+
+          keytool -list -v \
+            -keystore android/app/lovely-release.jks \
+            -alias "$ANDROID_KEY_ALIAS" \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" |
+          python3 -c 'import re,sys; s=sys.stdin.read(); m=re.search(r"SHA256:\s*([0-9A-Fa-f:]+)",s); actual=m.group(1).replace(":","").upper() if m else ""; expected="92FBB083DC5BEC6A17A83A30D02A3453DD7548D1B45ADE7B478CB74B252C0961"; print("Working APK signing certificate match:", actual == expected); sys.exit(0 if actual == expected else 1)'
+
+          python3 - <<'PY_SIGN'
+          from pathlib import Path
+          import re
+
+          p = next(
+              (Path(x) for x in ("android/app/build.gradle.kts", "android/app/build.gradle")
+               if Path(x).exists()), None
+          )
+          if not p:
+              raise SystemExit("ERROR: App Gradle file not found.")
+
+          s = p.read_text()
+          kts = p.suffix == ".kts"
+
+          if "signingConfigs" not in s:
+              block = (
+                  '\n    signingConfigs {\n'
+                  '        create("release") {\n'
+                  '            storeFile = file("lovely-release.jks")\n'
+                  '            storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")\n'
+                  '            keyAlias = System.getenv("ANDROID_KEY_ALIAS")\n'
+                  '            keyPassword = System.getenv("ANDROID_KEY_PASSWORD")\n'
+                  '        }\n'
+                  '    }\n'
+                  if kts else
+                  '\n    signingConfigs {\n'
+                  '        release {\n'
+                  '            storeFile file("lovely-release.jks")\n'
+                  '            storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")\n'
+                  '            keyAlias System.getenv("ANDROID_KEY_ALIAS")\n'
+                  '            keyPassword System.getenv("ANDROID_KEY_PASSWORD")\n'
+                  '        }\n'
+                  '    }\n'
+              )
+              m = re.search(r"\bandroid\s*\{", s)
+              if not m:
+                  raise SystemExit("ERROR: Android Gradle block not found.")
+              s = s[:m.end()] + block + s[m.end():]
+
+          m = re.search(r"\bbuildTypes\s*\{", s)
+          if not m:
+              raise SystemExit("ERROR: buildTypes block not found.")
+          r = re.search(r"\brelease\s*\{", s[m.end():])
+          if not r:
+              raise SystemExit("ERROR: release build type not found.")
+          pos = m.end() + r.end()
+          release_block_end = s.find("\n        }", pos)
+          if release_block_end == -1:
+              raise SystemExit("ERROR: Cannot locate release build configuration.")
+
+          block = s[pos:release_block_end]
+          signing_line = (
+              '\n            signingConfig = signingConfigs.getByName("release")'
+              if kts else
+              '\n            signingConfig signingConfigs.release'
+          )
+          if "signingConfig" in block:
+              block = re.sub(
+                  r"(?m)^\s*signingConfig\s*=?.*$",
+                  signing_line.strip(),
+                  block
+              )
+          else:
+              block = signing_line + block
+          s = s[:pos] + block + s[release_block_end:]
+          p.write_text(s)
+          print("SUCCESS: Release signing configuration added.")
+          PY_SIGN
 
       - name: Build APK
         run: flutter build apk --release
