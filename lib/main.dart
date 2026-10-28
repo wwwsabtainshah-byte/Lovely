@@ -19,10 +19,10 @@ Future<void> main() async {
   runApp(const LovelyChatApp());
 }
 
-const Color bg = Color(0xFF0C061F);
-const Color panel = Color(0xFF1B113A);
-const Color purple = Color(0xFF9B6DFF);
-const Color pink = Color(0xFFFF65BD);
+const Color bg = Color(0xFF080412);
+const Color panel = Color(0xFF24103F);
+const Color purple = Color(0xFFB388FF);
+const Color pink = Color(0xFFFF4FD8);
 
 class LovelyChatApp extends StatelessWidget {
   const LovelyChatApp({super.key});
@@ -1636,9 +1636,9 @@ class _VoiceRoomsPageState extends State<VoiceRoomsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bg,
+      backgroundColor: const Color(0xFF080412),
       appBar: AppBar(
-        backgroundColor: bg,
+        backgroundColor: const Color(0xFF080412),
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text(
@@ -2656,9 +2656,9 @@ class MomentPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bg,
+      backgroundColor: const Color(0xFF080412),
       appBar: AppBar(
-        backgroundColor: bg,
+        backgroundColor: const Color(0xFF080412),
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text(
@@ -2939,9 +2939,9 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bg,
+      backgroundColor: const Color(0xFF080412),
       appBar: AppBar(
-        backgroundColor: bg,
+        backgroundColor: const Color(0xFF080412),
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text(
@@ -3343,9 +3343,9 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bg,
+      backgroundColor: const Color(0xFF080412),
       appBar: AppBar(
-        backgroundColor: bg,
+        backgroundColor: const Color(0xFF080412),
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text(

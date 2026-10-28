@@ -99,10 +99,10 @@ class _LovelyNewProfileState extends State<LovelyNewProfile> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0C061F),
+      backgroundColor: const Color(0xFF080412),
       appBar: AppBar(
         title: const Text('Me'),
-        backgroundColor: const Color(0xFF0C061F),
+        backgroundColor: const Color(0xFF080412),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_rounded),
