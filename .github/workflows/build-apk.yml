@@ -193,7 +193,23 @@ jobs:
           s = p.read_text()
           kts = p.suffix == ".kts"
 
-          if "signingConfigs" not in s:
+          def closing_brace(text, opening):
+              depth = 0
+              for i in range(opening, len(text)):
+                  if text[i] == "{":
+                      depth += 1
+                  elif text[i] == "}":
+                      depth -= 1
+                      if depth == 0:
+                          return i
+              raise SystemExit("ERROR: Unbalanced Gradle braces.")
+
+          sc = re.search(r"\bsigningConfigs\s*\{", s)
+          if not sc:
+              android = re.search(r"\bandroid\s*\{", s)
+              if not android:
+                  raise SystemExit("ERROR: Android Gradle block not found.")
+              pos = android.end()
               block = (
                   '\n    signingConfigs {\n'
                   '        create("release") {\n'
@@ -213,39 +229,64 @@ jobs:
                   '        }\n'
                   '    }\n'
               )
-              m = re.search(r"\bandroid\s*\{", s)
-              if not m:
-                  raise SystemExit("ERROR: Android Gradle block not found.")
-              s = s[:m.end()] + block + s[m.end():]
+              s = s[:pos] + block + s[pos:]
+          else:
+              opening = s.find("{", sc.start())
+              close = closing_brace(s, opening)
+              body = s[opening + 1:close]
+              has_release = (
+                  bool(re.search(r'\bcreate\s*\(\s*["\']release["\']\s*\)', body))
+                  or bool(re.search(r'\bgetByName\s*\(\s*["\']release["\']\s*\)', body))
+                  or bool(re.search(r'(?m)^\s*release\s*\{', body))
+              )
+              if not has_release:
+                  block = (
+                      '\n        create("release") {\n'
+                      '            storeFile = file("lovely-release.jks")\n'
+                      '            storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")\n'
+                      '            keyAlias = System.getenv("ANDROID_KEY_ALIAS")\n'
+                      '            keyPassword = System.getenv("ANDROID_KEY_PASSWORD")\n'
+                      '        }\n'
+                      if kts else
+                      '\n        release {\n'
+                      '            storeFile file("lovely-release.jks")\n'
+                      '            storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")\n'
+                      '            keyAlias System.getenv("ANDROID_KEY_ALIAS")\n'
+                      '            keyPassword System.getenv("ANDROID_KEY_PASSWORD")\n'
+                      '        }\n'
+                  )
+                  s = s[:close] + block + s[close:]
 
-          m = re.search(r"\bbuildTypes\s*\{", s)
-          if not m:
+          bt = re.search(r"\bbuildTypes\s*\{", s)
+          if not bt:
               raise SystemExit("ERROR: buildTypes block not found.")
-          r = re.search(r"\brelease\s*\{", s[m.end():])
-          if not r:
-              raise SystemExit("ERROR: release build type not found.")
-          pos = m.end() + r.end()
-          release_block_end = s.find("\n        }", pos)
-          if release_block_end == -1:
-              raise SystemExit("ERROR: Cannot locate release build configuration.")
+          bt_open = s.find("{", bt.start())
+          bt_close = closing_brace(s, bt_open)
+          release = re.search(r"\brelease\s*\{", s[bt_open + 1:bt_close])
+          if not release:
+              raise SystemExit("ERROR: Release build type not found.")
 
-          block = s[pos:release_block_end]
-          signing_line = (
-              '\n            signingConfig = signingConfigs.getByName("release")'
+          rel_open = bt_open + 1 + release.end() - 1
+          rel_close = closing_brace(s, rel_open)
+          body = s[rel_open + 1:rel_close]
+          line = (
+              '            signingConfig = signingConfigs.getByName("release")'
               if kts else
-              '\n            signingConfig signingConfigs.release'
+              '            signingConfig signingConfigs.release'
           )
-          if "signingConfig" in block:
-              block = re.sub(
-                  r"(?m)^\s*signingConfig\s*=?.*$",
-                  signing_line.strip(),
-                  block
+          if re.search(r"(?m)^\s*signingConfig\s*=?\s*.*$", body):
+              body = re.sub(
+                  r"(?m)^\s*signingConfig\s*=?\s*.*$",
+                  line,
+                  body,
+                  count=1
               )
           else:
-              block = signing_line + block
-          s = s[:pos] + block + s[release_block_end:]
+              body = "\n" + line + body
+
+          s = s[:rel_open + 1] + body + s[rel_close:]
           p.write_text(s)
-          print("SUCCESS: Release signing configuration added.")
+          print("SUCCESS: Release signing config will be created and selected.")
           PY_SIGN
 
       - name: Build APK
